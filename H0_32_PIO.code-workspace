@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "H0_32_PIO",
+			"path": "."
+		},
+		{
+			"name": "OLED",
+			"path": "../../../PlatformIO/Projects/OLED"
+		}
+	],
+	"settings": {}
+}
