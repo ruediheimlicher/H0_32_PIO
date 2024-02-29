@@ -5,8 +5,8 @@
 			"path": "."
 		},
 		{
-			"name": "OLED",
-			"path": "../../../PlatformIO/Projects/OLED"
+			"name": "teensymonitortest",
+			"path": "../../../PlatformIO/Projects/teensymonitortest"
 		}
 	],
 	"settings": {}
