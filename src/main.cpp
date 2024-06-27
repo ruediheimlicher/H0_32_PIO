@@ -18,6 +18,7 @@
 ////// @see		ReadMe.txt for references
 ///
 
+// https://github.com/MaximilianBlase/EA-DogLibrary
 
 // Core library for code-sense - IDE-based
 // !!! Help: http://bit.ly/2AdU7cu
@@ -161,7 +162,7 @@ float sinpos = 0;
 
 
 
-#define ANZLOKALLOKS       2 // anz loks bei lokalem Betrieb
+#define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
 
 
 gpio_MCP23S17 mcp0(10,0x20);//instance 0 (address A0,A1,A2 tied to 0)
@@ -323,12 +324,13 @@ void pakettimerfunction()
          }
       
       if ((sourcestatus & 0x01) && (paketpos == 0))
+      //if (sourcestatus & 0x01) // local
       {
          OSZI_A_LO();
          digitalWriteFast(LOKSYNC,LOW);
       }
       //
-      else if ((sourcestatus & 0x02) && (paketpos == loknummer))
+      else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
       {
          digitalWriteFast(LOKSYNC,LOW);
       }
@@ -936,16 +938,7 @@ void loop()
 #pragma mark mcp
    if (sincemcp > 10)
    {
-      /*
-      if (Serial)
-      {
-         loopstatus |= (1<<SERIAL_OK);
-      }
-      else
-      {
-//        loopstatus &= ~(1<<SERIAL_OK);
-      }
-       */
+      
       
       sincemcp = 0;
       // bit 0: Funktion
@@ -1113,47 +1106,42 @@ void loop()
       lcd_putc('U');
       lcd_puthex(usbtask);
       lcd_putc('*');
-      lcd_gotoxy(0, 3);
-      lcd_puthex(tastencodeA);
-      lcd_putc(' ');
+      //lcd_gotoxy(0, 3);
+      //lcd_puthex(tastencodeA);
+      //lcd_putc(' ');
       //lcd_puthex(tastenadresseA);
       //lcd_putc(' ');
       //lcd_puthex(tastencodeB);
       //lcd_putc(' ');
       //lcd_puthex(tastenadresseB);
 
-      if(loknummer == 0)
-      {
-         lcd_putint1(loknummer);
-         lcd_putc(' ');
-         lcd_putint1(usbadressearray[0]);
-         lcd_putint1(usbadressearray[1]);
-         lcd_putint1(usbadressearray[2]);
-         lcd_putint1(usbadressearray[3]);
-         lcd_putc(' ');
-         lcd_putint(buffer[17]);
-      }
-     
+         
       lcd_gotoxy(15, 0);
 
       if(sourcestatus == 2)
       {
          lcd_puts("USB  ");
+         if(loknummer == 0)
+         {
+           lcd_gotoxy(0, 3); 
+            lcd_putint1(loknummer);
+            lcd_putc(' ');
+            lcd_putint1(usbadressearray[0]);
+            lcd_putint1(usbadressearray[1]);
+            lcd_putint1(usbadressearray[2]);
+            lcd_putint1(usbadressearray[3]);
+            lcd_putc(' ');
+            lcd_putint(buffer[17]);
+         }
 
-         //lcd_gotoxy(8,3);
-         //lcd_putint12(taskarray[0][0]);
-         /*
-         lcd_putc(' ');
-         lcd_putint12(taskarray[0][1]);
-         lcd_putc(' ');
-         lcd_putint12(taskarray[0][2]);
-         lcd_putc(' ');
-         lcd_putint12(taskarray[0][3]);
-         */
+         
       }
      else if (sourcestatus == 1)
       {
          lcd_puts("local");
+
+         lcd_gotoxy(0, 3);
+         lcd_puthex(tastencodeA);
       }
 
       // Kanal A
