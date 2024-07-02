@@ -13,5 +13,7 @@
 			"path": "../../../Elektronik/ AVR/ AVR_Programme/H0_Decoder_A84_Bridge_PIO"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
 }
