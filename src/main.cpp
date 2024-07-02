@@ -323,8 +323,7 @@ void pakettimerfunction()
          //OSZI_B_LO();
          }
       
-      if ((sourcestatus & 0x01) && (paketpos == 0))
-      //if (sourcestatus & 0x01) // local
+      if ((sourcestatus & 0x01) && (paketpos == 0))// local
       {
          OSZI_A_LO();
          digitalWriteFast(LOKSYNC,LOW);
@@ -945,7 +944,10 @@ void loop()
       // bit 1: Richtungsimpuls
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
-      tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+      //tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+      
+      // 240702: Adresse invertiert, analog Trafo und H0-Interface
+      tastencodeA = mcp0.gpioReadPortA();
       tastenadresseA = (tastencodeA & 0xF0) >> 4; // Bit 7-4 4 pos nach rechts, bit 0 enspricht diptaste ganz links
 
       
@@ -969,7 +971,10 @@ void loop()
          }
       }
       
-      tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
+     // tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
+     
+     tastencodeB = mcp0.gpioReadPortB(); 
+     
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
       lokaladressearray[1] = (tastencodeB & 0xF0) >> 4;
       lokalcodearray[1] = tastencodeB & 0x0F;// Bit 0-3
