@@ -944,15 +944,14 @@ void loop()
       // bit 1: Richtungsimpuls
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
-      //tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+      tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
       
-      // 240702: Adresse invertiert, analog Trafo und H0-Interface
-      tastencodeA = mcp0.gpioReadPortA();
-      tastenadresseA = (tastencodeA & 0xF0) >> 4; // Bit 7-4 4 pos nach rechts, bit 0 enspricht diptaste ganz links
+      //240702: Tastencode invertiert, analog Trafo und H0-Interface
+      uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4;
 
-      
+      //lokaladressearray[0] = (tastencodeA & 0xF0) >> 4;
+      lokaladressearray[0] = 0xFF - tastencodeA_raw;
 
-      lokaladressearray[0] = (tastencodeA & 0xF0) >> 4;
       lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3
       
       
@@ -961,22 +960,28 @@ void loop()
          if (tastenadresseA & (1<<i))
          {
             diptastenadresseA &= ~(1<<2*i);
-            diptastenadresseA &= ~(1<<2*i+1);
+            diptastenadresseA &= ~(1<<(2*i+1));
 
          }
          else
          {
             diptastenadresseA |= (1<<2*i);
-            diptastenadresseA |= (1<<2*i+1);
+            diptastenadresseA |= (1<<(2*i+1));
          }
       }
       
-     // tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
+      tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
      
-     tastencodeB = mcp0.gpioReadPortB(); 
+     //tastencodeB = mcp0.gpioReadPortB(); 
      
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
-      lokaladressearray[1] = (tastencodeB & 0xF0) >> 4;
+
+      //240702: Tastencode invertiert, analog Trafo und H0-Interface
+      uint8_t tastencodeB_raw = (tastencodeB & 0xF0) >> 4;
+
+      //lokaladressearray[1] = (tastencodeB & 0xF0) >> 4;
+      lokaladressearray[1] = 0xFF - tastencodeB_raw;
+      
       lokalcodearray[1] = tastencodeB & 0x0F;// Bit 0-3
 
       for (uint8_t i=0;i<4;i++)
@@ -984,14 +989,14 @@ void loop()
          if (tastenadresseB & (1<<i))
          {
             
-          diptastenadresseB &= ~(1<<2*i);
-            diptastenadresseB &= ~(1<<2*i+1);
+            diptastenadresseB &= ~(1<<2*i);
+            diptastenadresseB &= ~(1<<(2*i+1));
 
          }
          else
          {
             diptastenadresseB |= (1<<2*i);
-            diptastenadresseB |= (1<<2*i+1);
+            diptastenadresseB |= (1<<(2*i+1));
           }
        }
 
