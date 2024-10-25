@@ -128,7 +128,7 @@ volatile uint16_t speedarray[5];
 
 volatile uint16_t localspeedarray[5]; // speedarray potwerte  local
 
-
+volatile uint8_t loknummerTRITarray[ANZLOKS] = {0};
 volatile uint8_t loknummer = 0;
 
 volatile uint8_t speed = 0;
@@ -233,7 +233,7 @@ volatile uint16_t          emitter = 0;
 volatile uint16_t          emitterarray[8] = {0};
 volatile uint16_t          emittermittel = 0;
 volatile uint8_t           emittermittelcounter = 0;
-volatile uint8_t           emitterNULL = 330;
+volatile uint16_t           emitterNULL = 330;
 volatile uint8_t           pause = PAUSE;
 volatile uint8_t           richtung = 1; // vorwaerts
 
@@ -323,6 +323,7 @@ void pakettimerfunction()
          //OSZI_B_LO();
          }
       
+      // syncsignal
       if ((sourcestatus & 0x01) && (paketpos == 0))// local
       {
          OSZI_A_LO();
@@ -367,14 +368,14 @@ void pakettimerfunction()
       {
          bytepos = 0;
          OSZI_A_HI();
-         OSZI_B_LO();
+         //OSZI_B_LO();
          if (paketpos < paketmax - 1)
          {
             paketpos++; // jede Lok ein Paket
             if (paketpos == paketmax - 1) // Paket fertig
             {
                //
-               OSZI_B_HI();
+               //OSZI_B_HI();
                paketpos = 0;
             }
          }
@@ -475,7 +476,7 @@ void setup()
    pinMode(OSZI_PULS_A, OUTPUT);
    digitalWriteFast(OSZI_PULS_A, HIGH); 
    pinMode(OSZI_PULS_B, OUTPUT);
-   digitalWriteFast(OSZI_PULS_B, HIGH); 
+   digitalWriteFast(OSZI_PULS_B, LOW); 
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
@@ -544,6 +545,8 @@ void setup()
    taskarray[0][0] = adressearray[0];
    
    eepromadressearray[0][0] = tritarray[buffer[8]];
+
+   // paket 0
    taskarray[0][1] = adressearray[1];
    taskarray[0][2] = adressearray[2];
    taskarray[0][3] = adressearray[3];
@@ -610,10 +613,10 @@ void setup()
    taskarray[2][2] = adressearray[2];
    taskarray[2][3] = adressearray[3];
    taskarray[2][4] = HI; // Lampe
-   taskarray[2][5] = speedarray[0];
-   taskarray[2][6] = speedarray[1];
-   taskarray[2][7] = speedarray[2];
-   taskarray[2][8] = speedarray[3];
+   taskarray[2][5] = 0;//speedarray[0];
+   taskarray[2][6] = 0;//speedarray[1];
+   taskarray[2][7] = 0;//speedarray[2];
+   taskarray[2][8] = 0;//speedarray[3];
    
    // pause
    taskarray[2][9] = 0;
@@ -831,103 +834,6 @@ void setup()
 //  lcd.print(eepromadressbyte);
  */ 
    
-   byte null[8] = 
-   {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000   };  
-    lcd_setcustom(0,null);
-     //  lcd.createChar(0, smiley);
-   byte eins[8] = {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b11111
-   };
-   //  lcd.createChar(1, eins);
-   lcd_setcustom(1,eins);
-   byte zwei[8] = {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(2, zwei);
-   lcd_setcustom(2,zwei);
-   byte drei[8] = {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b11111,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(3, drei);
-   lcd_setcustom(3,drei);
-   byte vier[8] = {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b00000,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(4, vier);
-   lcd_setcustom(4,vier);
-   byte fuenf[8] = {
-      0b00000,
-      0b00000,
-      0b00000,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(5, fuenf);
-   lcd_setcustom(5,fuenf);
-   byte sechs[8] = {
-      0b00000,
-      0b00000,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(6, sechs);
-   lcd_setcustom(6,sechs);
-   byte sieben[8] = {
-      0b00000,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111,
-      0b11111
-   };
-   //  lcd.createChar(7, sieben);
-   lcd_setcustom(7,sieben);
-
 
 }
 
@@ -945,9 +851,12 @@ void loop()
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
       tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
-      
+      //tastencodeA = mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+
       //240702: Tastencode invertiert, analog Trafo und H0-Interface
       uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4;
+
+      tastenadresseA = (tastencodeA & 0xF0) >> 4;
 
       //lokaladressearray[0] = (tastencodeA & 0xF0) >> 4;
       lokaladressearray[0] = 0xFF - tastencodeA_raw;
@@ -957,7 +866,7 @@ void loop()
       
       for (uint8_t i=0;i<4;i++)
       {
-         if (tastenadresseA & (1<<i))
+         if (tastenadresseA & (1<<(i)))
          {
             diptastenadresseA &= ~(1<<2*i);
             diptastenadresseA &= ~(1<<(2*i+1));
@@ -976,17 +885,18 @@ void loop()
      
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
 
-      //240702: Tastencode invertiert, analog Trafo und H0-Interface
+      //240702: Tastencode invertieren, > DIP-code wird analog Trafo und H0-Interface
       uint8_t tastencodeB_raw = (tastencodeB & 0xF0) >> 4;
 
       //lokaladressearray[1] = (tastencodeB & 0xF0) >> 4;
+      
       lokaladressearray[1] = 0xFF - tastencodeB_raw;
       
       lokalcodearray[1] = tastencodeB & 0x0F;// Bit 0-3
 
       for (uint8_t i=0;i<4;i++)
        {
-         if (tastenadresseB & (1<<i))
+         if (tastenadresseB & (1<<(3-i)))
          {
             
             diptastenadresseB &= ~(1<<2*i);
@@ -1131,7 +1041,7 @@ void loop()
       if(sourcestatus == 2)
       {
          lcd_puts("USB  ");
-         if(loknummer == 0)
+         if(loknummer == 2)
          {
            lcd_gotoxy(0, 3); 
             lcd_putint1(loknummer);
@@ -1140,8 +1050,9 @@ void loop()
             lcd_putint1(usbadressearray[1]);
             lcd_putint1(usbadressearray[2]);
             lcd_putint1(usbadressearray[3]);
+            
             lcd_putc(' ');
-            lcd_putint(buffer[17]);
+            lcd_putint(buffer[17]); // speed_raw. Bit 1: richtung bit2-4 speed
          }
 
          
@@ -1159,13 +1070,17 @@ void loop()
       lcd_puts("A ");
       lcd_puthex(diptastenadresseA);
       lcd_putc(' ');
+      lcd_hextobin(diptastenadresseA);
+      lcd_putc(' ');
+      
       lcd_putint(localpotarray[0]);
+
       lcd_putc(' ');
-      lcd_putint2(localspeedarray[0]);
-      lcd_putc(' ');
+      //lcd_putint2(localspeedarray[0]);
+      //lcd_putc(' ');
       if(taskarray[0][4] == LO)
       {
-         lcd_puts("OFF");
+         lcd_puts("OF");
       }
       else if(taskarray[0][4] == HI)
       {
@@ -1182,13 +1097,14 @@ void loop()
       lcd_puts("B ");
       lcd_puthex(diptastenadresseB);
       lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_putint2(localspeedarray[1]);
+      lcd_hextobin(diptastenadresseB);
+      //lcd_putint(localpotarray[1]);
+      //lcd_putc(' ');
+      //lcd_putint2(localspeedarray[1]);
       lcd_putc(' ');
       if(taskarray[1][4] == LO)
       {
-         lcd_puts("OFF");
+         lcd_puts("OF");
       }
       else if(taskarray[1][4] == HI)
       {
@@ -1393,6 +1309,15 @@ void loop()
                taskarray[loknummer][2] = tritarray[buffer[10]];
                taskarray[loknummer][3] = tritarray[buffer[11]];
                
+               /*
+               if(loknummer == 2)
+               {
+                  loknummerTRITarray[0] = tritarray[buffer[8]];
+                  loknummerTRITarray[1] = tritarray[buffer[9]];
+                  loknummerTRITarray[2] = tritarray[buffer[10]];
+                  loknummerTRITarray[3] = tritarray[buffer[11]];
+               }
+*/
                uint8_t eeprompos = 0;
                
                eeprompos = 0;

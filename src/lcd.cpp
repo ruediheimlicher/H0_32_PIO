@@ -259,7 +259,16 @@ void lcd_putint1(uint8_t zahl)   //einstellige Zahl
    lcd_puts(string);
 }
 
-
+void lcd_hextobin(uint8_t hexzahl)
+{
+   
+    // Convert hex to binary string
+    for (int i = 7; i >= 0; i--) 
+    {
+        lcd_putc((hexzahl & (1 << i)) ? '1' : '0');
+    }
+    
+}
 
 /*************************************************************************
  Display string without auto linefeed 
