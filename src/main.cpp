@@ -1070,12 +1070,12 @@ void loop()
       lcd_puts("A ");
       lcd_puthex(diptastenadresseA);
       lcd_putc(' ');
-      lcd_hextobin(diptastenadresseA);
+      //lcd_hextobin(diptastenadresseA);
       lcd_putc(' ');
       
       lcd_putint(localpotarray[0]);
 
-      lcd_putc(' ');
+      //lcd_putc(' ');
       //lcd_putint2(localspeedarray[0]);
       //lcd_putc(' ');
       if(taskarray[0][4] == LO)
@@ -1084,7 +1084,7 @@ void loop()
       }
       else if(taskarray[0][4] == HI)
       {
-         lcd_puts("ON ");
+         lcd_puts("ON");
       }
       
       //lcd_puthex(loopstatus);
@@ -1097,7 +1097,7 @@ void loop()
       lcd_puts("B ");
       lcd_puthex(diptastenadresseB);
       lcd_putc(' ');
-      lcd_hextobin(diptastenadresseB);
+      //lcd_hextobin(diptastenadresseB);
       //lcd_putint(localpotarray[1]);
       //lcd_putc(' ');
       //lcd_putint2(localspeedarray[1]);
@@ -1108,7 +1108,7 @@ void loop()
       }
       else if(taskarray[1][4] == HI)
       {
-         lcd_puts("ON ");
+         lcd_puts("ON");
       }
 
       //lcd_putc(loopcounter & 0x07);
@@ -1309,7 +1309,7 @@ void loop()
                taskarray[loknummer][2] = tritarray[buffer[10]];
                taskarray[loknummer][3] = tritarray[buffer[11]];
                
-               /*
+               
                if(loknummer == 2)
                {
                   loknummerTRITarray[0] = tritarray[buffer[8]];
@@ -1317,7 +1317,7 @@ void loop()
                   loknummerTRITarray[2] = tritarray[buffer[10]];
                   loknummerTRITarray[3] = tritarray[buffer[11]];
                }
-*/
+
                uint8_t eeprompos = 0;
                
                eeprompos = 0;
@@ -2166,25 +2166,29 @@ void loop()
             speed_raw = 15;
          }
          
-         /*
+          /*
           if (richtungstatus & (1<<RICHTUNGSTART)) // Richtungswechsel im Gang
           {
             richtungcounter++;
-          if (richtungcounter > 4)
-          {
-            richtungstatus &= ~(1<<RICHTUNGSTART); // Richtungswechsel beenden
-          taskarray[localnum][5] = HI; // Richtungbit reset
-          richtungcounter = 0;
+            if (richtungcounter > 4)
+            {
+               richtungstatus &= ~(1<<RICHTUNGSTART); // Richtungswechsel beenden
+            taskarray[localnum][5] = HI; // Richtungbit reset
+            richtungcounter = 0;
+            }
           }
-          }
+
           */
          
-         uint8_t speed_red = 0;
-  //       Serial.print("local speed_raw 0: ");
-  //       Serial.println(speed_raw);
-  //       //  lcd.setCursor(0,0);
-  //       //  lcd.print("Lok0");
- /*        
+            uint8_t speed_red = 0;
+
+            //       Serial.print("local speed_raw 0: ");
+            //       Serial.println(speed_raw);
+            //       //  lcd.setCursor(0,0);
+            //       //  lcd.print("Lok0");
+           
+         /*   
+
          lcd_gotoxy(0, 0);
          lcd_puts("Lok");
          lcd_putint1(localnum);
@@ -2202,8 +2206,8 @@ void loop()
             // //  lcd.print("speed ");
          }
 //         //  lcd.print(speed_raw);
-         
- */        
+         */
+                 
          
 #pragma mark local speed
          if (speed_raw < 2) // stillstand oder Richtungswachsel
@@ -2259,7 +2263,7 @@ void loop()
          } // speed_raw >= 2
          localspeedarray[localnum] = speed;
          
-      /*   
+         /*   
          for (int i=5; i<9; i++) 
          {
             if (taskarray[localnum][i] == 0xFEFE)
