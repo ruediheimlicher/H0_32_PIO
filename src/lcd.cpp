@@ -408,6 +408,7 @@ void lcd_cls(void)
 // Linie Loeschen
 void lcd_clr_line(uint8_t Linie)
 {
+   
    lcd_gotoxy(0,Linie);
    uint8_t i=0;
    for (i=0;i<LCD_DISP_LENGTH;i++)
