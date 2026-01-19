@@ -158,14 +158,14 @@ float sinpos = 0;
 #define SPI_CLK   13
 #define SPI_MISO  12
 #define SPI_MOSI  11
-#define SPI_CS    10
+#define SPI_MCP_CS    10
 
 
 
 #define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
 
-
-gpio_MCP23S17 mcp0(10,0x20);//instance 0 (address A0,A1,A2 tied to 0)
+// cs 10
+gpio_MCP23S17 mcp0(SPI_MCP_CS,0x20);//instance 0 (address A0,A1,A2 tied to 0)
 uint8_t regA = 0x0;
 uint8_t regB = 0;
 
@@ -233,7 +233,7 @@ volatile uint16_t          emitter = 0;
 volatile uint16_t          emitterarray[8] = {0};
 volatile uint16_t          emittermittel = 0;
 volatile uint8_t           emittermittelcounter = 0;
-volatile uint16_t           emitterNULL = 330;
+volatile uint16_t          emitterNULL = 330;
 volatile uint8_t           pause = PAUSE;
 volatile uint8_t           richtung = 1; // vorwaerts
 
@@ -851,7 +851,6 @@ void loop()
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
       tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
-      //tastencodeA = mcp0.gpioReadPortA(); // active taste ist LO > invertieren
 
       //240702: Tastencode invertiert, analog Trafo und H0-Interface
       uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4;
@@ -862,7 +861,6 @@ void loop()
       lokaladressearray[0] = 0xFF - tastencodeA_raw;
 
       lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3
-      
       
       for (uint8_t i=0;i<4;i++)
       {
@@ -880,9 +878,7 @@ void loop()
       }
       
       tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
-     
-     //tastencodeB = mcp0.gpioReadPortB(); 
-     
+          
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
 
       //240702: Tastencode invertieren, > DIP-code wird analog Trafo und H0-Interface
@@ -896,12 +892,11 @@ void loop()
 
       for (uint8_t i=0;i<4;i++)
        {
-         if (tastenadresseB & (1<<(3-i)))
+         //if (tastenadresseB & (1<<(3-i)))
+         if (tastenadresseB & (1<<(i)))
          {
-            
             diptastenadresseB &= ~(1<<2*i);
             diptastenadresseB &= ~(1<<(2*i+1));
-
          }
          else
          {
@@ -1009,7 +1004,14 @@ void loop()
        //  lcd.setCursor(12,0);
        //  lcd.print(pot0);
        */
+       /*
+       lcd_gotoxy(12,1);
+       lcd_puthex(tastencodeA & 0x02);
+       lcd_gotoxy(12,2);
+       lcd_puthex(tastencodeB & 0x02);
+       */
    } // if sinceemitter
+
    
 #pragma mark blink 
    if (sinceblink > 500)
@@ -1072,7 +1074,7 @@ void loop()
          lcd_putint1(loknummerTRITarray[3]);
          */
       }
-
+/*
          lcd_gotoxy(0,3);
          lcd_putint12(loknummerTRITarray[0]);
          lcd_putc(' ');
@@ -1081,21 +1083,24 @@ void loop()
          lcd_putint12(loknummerTRITarray[2]);
          lcd_putc(' ');
          lcd_putint12(loknummerTRITarray[3]);
-
+*/
 
       // Kanal A
       
       lcd_gotoxy(0,1);
       lcd_puts("A ");
       lcd_puthex(diptastenadresseA);
-      lcd_putc(' ');
-      lcd_hextobin(diptastenadresseA);
+      //lcd_putc(' ');
+      //lcd_hextobin(diptastenadresseA);
       lcd_putc(' ');
       
-      //lcd_putint(localpotarray[0]);
+      lcd_putint(localpotarray[0]);
 
       //lcd_putc(' ');
-      //lcd_putint2(localspeedarray[0]);
+      //lcd_putint2(taskarray[0][5]);
+
+      //lcd_putc(' ');
+      //lcd_putint2(speed);
       lcd_putc(' ');
       if(taskarray[0][4] == LO)
       {
@@ -1105,6 +1110,8 @@ void loop()
       {
          lcd_puts("ON");
       }
+      //lcd_putc(' ');
+
       
       //lcd_puthex(loopstatus);
       //lcd_putc(' ');
@@ -1117,11 +1124,14 @@ void loop()
       lcd_puts("B ");
       lcd_puthex(diptastenadresseB);
       lcd_putc(' ');
-      lcd_hextobin(diptastenadresseB);
-      //lcd_putint(localpotarray[1]);
+      //lcd_hextobin(diptastenadresseB);
       //lcd_putc(' ');
-      //lcd_putint2(localspeedarray[1]);
+      lcd_putint(localpotarray[1]);
       lcd_putc(' ');
+      lcd_putint2(taskarray[1][5]);
+      lcd_putc(' ');
+      
+      
       if(taskarray[1][4] == LO)
       {
          lcd_puts("OF");
@@ -1164,7 +1174,7 @@ void loop()
        */
        if (speed > 15)
        {
-       speed = 0;
+         speed = 0;
        }
        
       /*
