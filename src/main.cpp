@@ -160,7 +160,12 @@ float sinpos = 0;
 #define SPI_MOSI  11
 #define SPI_MCP_CS    10
 
+#define SPI_ESP32_CS    23
 
+uint8_t tx = 0;
+uint8_t rx = 0;
+
+SPISettings settingsA(1000000, MSBFIRST, SPI_MODE0); 
 
 #define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
 
@@ -481,8 +486,15 @@ void setup()
    //ghpinMode(SOURCECONTROL, INPUT);
    
    LCD_init();
-   
-   
+   _delay_ms(200);
+
+   pinMode(SPI_ESP32_CS,OUTPUT);
+   digitalWrite(SPI_ESP32_CS,HIGH);
+
+   //SPI.begin();
+
+   _delay_ms(200);
+
    mcp0.begin();
    /*
     • PortA registeraddresses range from 00h–0Ah
@@ -845,7 +857,22 @@ void loop()
    {
       
       
+
       sincemcp = 0;
+
+      SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+
+      digitalWrite(SPI_ESP32_CS, LOW);
+
+      tx = 0x42;
+      rx = SPI.transfer(tx);
+
+      digitalWrite(SPI_ESP32_CS, HIGH);
+
+
+      SPI.endTransaction();
+
+
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
       
@@ -1018,6 +1045,7 @@ void loop()
    {
       sinceblink = 0;
       loopcounter++;
+
       
       //_delay_ms(10);
       //pinMode(LOOPLED, OUTPUT);
