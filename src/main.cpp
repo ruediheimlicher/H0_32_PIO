@@ -155,12 +155,15 @@ float sinpos = 0;
 #define SIN_START   0xE0
 #define SIN_STOP   0xE1
 
-#define SPI_CLK   13
-#define SPI_MISO  12
-#define SPI_MOSI  11
-#define SPI_MCP_CS    10
+#define SPI_CLK         13
+#define SPI_MISO        12
+#define SPI_MOSI        11
+#define SPI_MCP_CS      10
 
+#define SPI_ESP32_CS    19
 
+uint8_t tx = 0;
+uint8_t rx = 0;
 
 #define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
 
@@ -368,7 +371,6 @@ void pakettimerfunction()
       {
          bytepos = 0;
          OSZI_A_HI();
-         //OSZI_B_LO();
          if (paketpos < paketmax - 1)
          {
             paketpos++; // jede Lok ein Paket
@@ -482,6 +484,12 @@ void setup()
    
    LCD_init();
    
+   //SPI ESP32
+   pinMode(SPI_ESP32_CS, OUTPUT);
+   digitalWrite(SPI_ESP32_CS, HIGH);
+   SPI.begin();
+   
+
    
    mcp0.begin();
    /*
@@ -841,17 +849,39 @@ void setup()
 void loop()
 {
 #pragma mark mcp
-   if (sincemcp > 10)
+   if (sincemcp > 10) // 80 us
    {
       
       
       sincemcp = 0;
+
+      OSZI_B_LO();
+      // 4 us
+      SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+      digitalWrite(SPI_ESP32_CS, LOW);
+
+      tx = 0x42;
+      rx = SPI.transfer(tx);
+
+      digitalWrite(SPI_ESP32_CS, HIGH);
+      SPI.endTransaction();
+
+      Serial.print("rx: ");
+      Serial.print(rx);
+      Serial.print(" tx: ");
+      Serial.println(tx);
+      //OSZI_B_HI();
+
+
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
-      tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+      //OSZI_B_LO();
 
+      tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+      // 12 us
+      //OSZI_B_HI();
       //240702: Tastencode invertiert, analog Trafo und H0-Interface
       uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4;
 
@@ -876,9 +906,9 @@ void loop()
             diptastenadresseA |= (1<<(2*i+1));
          }
       }
-      
+      //OSZI_B_LO();
       tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
-          
+      //OSZI_B_HI();
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
 
       //240702: Tastencode invertieren, > DIP-code wird analog Trafo und H0-Interface
@@ -908,14 +938,14 @@ void loop()
       
       tastenstatusA |= tastencodeB;
       
-      
-      // Pot auslesen
+      //OSZI_B_LO();
+      // Pot auslesen 50 us
       for (uint8_t i=0;i<ANZLOKALLOKS;i++)
       {
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
       }
-      
+      OSZI_B_HI();
    } // if (sincemcp )
    
 #pragma mark EMITTER 
