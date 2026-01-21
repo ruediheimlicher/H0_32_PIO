@@ -5,16 +5,8 @@
 			"path": "."
 		},
 		{
-			"name": "teensymonitortest",
-			"path": "../../../PlatformIO/Projects/teensymonitortest"
-		},
-		{
-			"name": "H0_Decoder_A84_Bridge_PIO",
-			"path": "../../../Elektronik/ AVR/ AVR_Programme/H0_Decoder_A84_Bridge_PIO"
-		},
-		{
-			"name": "CNC_Slave_32",
-			"path": "../../CNC-Projekt/CNC_Slave_32"
+			"name": "teensy-starter",
+			"path": "../../../PlatformIO/Projects/teensy-starter"
 		}
 	],
 	"settings": {

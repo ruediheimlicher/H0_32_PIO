@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include <util/delay.h>
 #include "Arduino.h"
 
 #ifndef Netzteil_18_lcd_h

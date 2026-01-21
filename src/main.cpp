@@ -26,15 +26,24 @@
 #include "Arduino.h"
 //#include <stdint.h>
 //#include <ADC.h>
+#include <avr/io.h>
 #include <ADC_util.h>
-
+//#include "esp_system.h"
+#include <RF24.h>
 #include <SPI.h>
 #include "gpio_MCP23S17.h"
+//#include <U8g2lib.h>
+
+//#include <U8g2lib.h>
+#include "lcd.h"
 
 //#include <Wire.h> 
-//#include <LiquidCrystal_I2C.h>
+////#include <LiquidCrystal_I2C.h>
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
-#include "lcd.h"
+//LiquidCrystal_I2C lcd(0x38);  // Set the LCD I2C address
+
+#//include "lcd.h"
 #include "analog.h"
 
 #include <EEPROM.h>
@@ -47,6 +56,14 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+
+
+#define CE_PIN 23 // Teensy_FS: Pin 9
+#define CSN_PIN 5
+
+const uint64_t pipeOut = 0xABCDABCD71LL;
+// instantiate an object for the nRF24L01 transceiver
+RF24 radio(CE_PIN, CSN_PIN);
 
 #define OLED_DC     6
 #define OLED_CS     7
@@ -160,7 +177,24 @@ float sinpos = 0;
 #define SPI_MOSI        11
 #define SPI_MCP_CS      10
 
-#define SPI_ESP32_CS    19
+#define SPI_ESP32_CS    23
+
+// ********************
+// ACK data ***********
+uint8_t ackData[8] = {0};
+// ********************
+// ********************
+struct Signal 
+{
+   byte throttle;
+   byte pitch;
+   byte roll;
+   byte yaw;
+   byte aux1;
+   byte aux2;
+   
+};
+Signal data;
 
 uint8_t tx = 0;
 uint8_t rx = 0;
@@ -396,6 +430,7 @@ void pakettimerfunction()
    
 }
 
+/*
 void LCD_init(void)
 {
    pinMode(LCD_RSDS_PIN, OUTPUT);
@@ -406,7 +441,7 @@ void LCD_init(void)
    digitalWrite(LCD_CLOCK_PIN,1);
 
 }
-
+*/
 void ADC_init(void) 
 {
    emitter=0; // 
@@ -437,9 +472,60 @@ void stromtimerfunction()
 // Add setup code
 void setup()
 {
+   //LCD
+
+   //
+   
+   //lcd.begin(16,2);               // initialize the lcd 
+
+   //u8g2.begin();
+
+   /*
+   pinMode(LCD_RSDS_PIN, OUTPUT);
+   pinMode(LCD_ENABLE_PIN, OUTPUT);
+   pinMode(LCD_CLOCK_PIN, OUTPUT);
+   */
+   /*
+   _delay_ms(100);
+   lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
+   _delay_ms(100);
+   lcd_puts("Guten Tag Charger");
+   _delay_ms(500);
+   */
+
+
    // Serial.begin(9600);
    // Serial.begin(115200);
  //while (!Serial) ;
+
+   //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
+   radio.begin();
+   radio.openWritingPipe(pipeOut);
+   
+   radio.setChannel(124);
+   radio.setDataRate(RF24_2MBPS); // Set the speed of the transmission to the quickest available
+   
+   radio.setPALevel(RF24_PA_MAX); // Output power is set for maximum range  |  Çıkış gücü maksimum menzil için ayarlanıyor.
+   
+   radio.setPALevel(RF24_PA_MIN);
+   radio.setPALevel(RF24_PA_MAX);
+   radio.enableAckPayload();
+   radio.setRetries(0, 0);
+   radio.stopListening(); // Start the radio comunication for Transmitter | Verici için sinyal iletişimini başlatır.
+   if (radio.failureDetected)
+   {
+      radio.failureDetected = false;
+      delay(250);
+      Serial.println("Radio failure detected, restarting radio");
+   }
+   else
+   {
+      Serial.println("Radio OK");
+   }
+
+
+
+   // end radio
    loopstatus |= (1<<FIRSTRUN); // Bit fuer tasks in erster Runde
    delay(100);
  //  analogWriteResolution(16); // 32767
@@ -482,11 +568,13 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   LCD_init();
+   //LCD_init();
    
+   delay(100);
    //SPI ESP32
    pinMode(SPI_ESP32_CS, OUTPUT);
    digitalWrite(SPI_ESP32_CS, HIGH);
+   delay(100);
    SPI.begin();
    
 
@@ -674,9 +762,9 @@ void setup()
    pinMode(POT_2_PIN, INPUT);
    pinMode(CURR_PIN, INPUT);
    
-   lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
-   _delay_ms(100);
-   lcd_puts("Teensy");
+   //lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
+   //_delay_ms(100);
+   //lcd_puts("Teensy");
 
    
    ADC_init();
@@ -686,7 +774,7 @@ void setup()
     //  lcd.backlight();
     //  lcd.setCursor(0,0);
     //  lcd.print("H0-32");
-    _delay_ms(200);
+    delay(200);
     //  lcd.clear();  
    uint8_t eepromtimerintervall = EEPROM.read(0xA0);
    if (eepromtimerintervall < 0xFF) // schon ein Wert gespeichert
@@ -857,21 +945,24 @@ void loop()
 
       OSZI_B_LO();
       // 4 us
+      /*
       SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
       digitalWrite(SPI_ESP32_CS, LOW);
 
       tx = 0x42;
-      rx = SPI.transfer(tx);
+      rx = SPI.transfer(tx++);
 
       digitalWrite(SPI_ESP32_CS, HIGH);
-      SPI.endTransaction();
 
+      SPI.endTransaction();
+      */
+     /*
       Serial.print("rx: ");
       Serial.print(rx);
       Serial.print(" tx: ");
       Serial.println(tx);
       //OSZI_B_HI();
-
+      */
 
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
@@ -1048,16 +1139,17 @@ void loop()
    {
       sinceblink = 0;
       loopcounter++;
-      
+      //lcd_gotoxy(0,1);
+      //lcd_puts("xy");
       //_delay_ms(10);
       //pinMode(LOOPLED, OUTPUT);
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
       //lcd_putc('a');
       //lcd_puts("blink");
-      lcd_gotoxy(8, 0);
-      lcd_putc('U');
-      lcd_puthex(usbtask);
-      lcd_putc('*');
+      //lcd_gotoxy(8, 0);
+      //lcd_putc('U');
+      //lcd_puthex(usbtask);
+      //lcd_putc('*');
       
       //lcd_gotoxy(0, 3);
       //lcd_puthex(tastencodeA);
@@ -1069,30 +1161,30 @@ void loop()
       //lcd_puthex(tastenadresseB);
 
          
-      lcd_gotoxy(15, 0);
+      //lcd_gotoxy(15, 0);
 
       if(sourcestatus == 2)
       {
-         lcd_puts("USB  ");
+         //lcd_puts("USB  ");
          if(loknummer == 0)
          {
-           lcd_gotoxy(0, 3); 
-            lcd_putint1(loknummer);
-            lcd_putc(' ');
-            lcd_putint1(usbadressearray[0]);
-            lcd_putint1(usbadressearray[1]);
-            lcd_putint1(usbadressearray[2]);
-            lcd_putint1(usbadressearray[3]);
+           //lcd_gotoxy(0, 3); 
+           // lcd_putint1(loknummer);
+           // lcd_putc(' ');
+           // lcd_putint1(usbadressearray[0]);
+           // lcd_putint1(usbadressearray[1]);
+           // lcd_putint1(usbadressearray[2]);
+           // lcd_putint1(usbadressearray[3]);
             
-            lcd_putc(' ');
-            lcd_putint(buffer[17]); // speed_raw. Bit 1: richtung bit2-4 speed
+            //lcd_putc(' ');
+            //lcd_putint(buffer[17]); // speed_raw. Bit 1: richtung bit2-4 speed
          }
 
          
       }
      else if (sourcestatus == 1)
       {
-         lcd_puts("local");
+         //lcd_puts("local");
 
          //lcd_gotoxy(0,3);
          //lcd_puthex(tastencodeA);
@@ -1117,28 +1209,28 @@ void loop()
 
       // Kanal A
       
-      lcd_gotoxy(0,1);
-      lcd_puts("A ");
-      lcd_puthex(diptastenadresseA);
+      //lcd_gotoxy(0,1);
+      //lcd_puts("A ");
+      //lcd_puthex(diptastenadresseA);
       //lcd_putc(' ');
       //lcd_hextobin(diptastenadresseA);
-      lcd_putc(' ');
+      //lcd_putc(' ');
       
-      lcd_putint(localpotarray[0]);
+      //lcd_putint(localpotarray[0]);
 
       //lcd_putc(' ');
       //lcd_putint2(taskarray[0][5]);
 
       //lcd_putc(' ');
       //lcd_putint2(speed);
-      lcd_putc(' ');
+      //lcd_putc(' ');
       if(taskarray[0][4] == LO)
       {
-         lcd_puts("OF");
+         //lcd_puts("OF");
       }
       else if(taskarray[0][4] == HI)
       {
-         lcd_puts("ON");
+         //lcd_puts("ON");
       }
       //lcd_putc(' ');
 
@@ -1149,7 +1241,7 @@ void loop()
       //uint8_t strompos = (emittermittel)/10;
 
       //Kanal B:
-      
+      /*
       lcd_gotoxy(0,2);
       lcd_puts("B ");
       lcd_puthex(diptastenadresseB);
@@ -1160,15 +1252,15 @@ void loop()
       lcd_putc(' ');
       lcd_putint2(taskarray[1][5]);
       lcd_putc(' ');
-      
+      */
       
       if(taskarray[1][4] == LO)
       {
-         lcd_puts("OF");
+         //lcd_puts("OF");
       }
       else if(taskarray[1][4] == HI)
       {
-         lcd_puts("ON");
+         //lcd_puts("ON");
       }
       
 
