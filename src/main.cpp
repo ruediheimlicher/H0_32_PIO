@@ -24,6 +24,9 @@
 // !!! Help: http://bit.ly/2AdU7cu
 
 #include "Arduino.h"
+
+#include "main.h"
+#include "defines.h"
 //#include <stdint.h>
 //#include <ADC.h>
 #include <ADC_util.h>
@@ -32,26 +35,82 @@
 #include "gpio_MCP23S17.h"
 
 //#include <Wire.h> 
-//#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
+
+//#include <hd44780.h>
+////#include <hd44780ioClass/hd44780_I2Cexp.h>
+
+//hd44780_I2Cexp lcd;
 
 #include "lcd.h"
 #include "analog.h"
 
 #include <EEPROM.h>
 
-//#include <RF24.h>
+#include <RF24.h>
 //#include <RF24Network.h>
 
 // Load Wi-Fi library
 //#include <ESP8266WiFi.h>
 
-#include <Adafruit_GFX.h>
+////#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
 #define OLED_DC     6
 #define OLED_CS     7
 #define OLED_RESET  8
-Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
+//Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
+
+
+
+// instantiate an object for the nRF24L01 transceiver
+
+#define CE_PIN 4 // Teensy_FS: Pin 9
+#define CSN_PIN 23
+RF24 radio(CE_PIN, CSN_PIN);
+uint16_t errcounter = 0;
+uint16_t radiocounter = 0;
+const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter and Receiver code must be the same "0xABCDABCD71LL" | Verici ve Alıcı kodundaki adres aynı olmalıdır
+
+// ********************
+// ACK data ***********
+uint8_t ackData[4] = {31, 32, 33, 34};
+// ********************
+// ********************
+
+elapsedMillis zeitintervall;
+uint8_t sekundencounter = 0;
+elapsedMillis sinceLastBlink = 0;
+
+Signal data;
+void ResetData()
+{
+   data.throttle = 0;
+   data.pitch = 127;
+   data.roll = 127;
+   data.yaw = 127;
+   data.aux1 = 0;
+   data.aux2 = 0;
+}
+
+void OSZIA_HI(void)
+{
+   digitalWriteFast(OSZIA_PIN, HIGH);
+}
+void OSZIA_LO(void)
+{
+   digitalWriteFast(OSZIA_PIN, LOW);
+}
+void OSZIA_TOG()
+{
+   digitalWriteFast(OSZIA_PIN, !(digitalRead(OSZIA_PIN)));
+}
+uint16_t lerp(uint16_t a, uint16_t b,float t)
+{
+   return a * (1 - t) + b * t;
+}
+
 
 ADC *adc = new ADC(); // adc object
 // Set parameters
@@ -78,7 +137,7 @@ ADC *adc = new ADC(); // adc object
 
 #define CONTROL_PIN  6
 
-#define CURR_PIN     A4
+#define CURR_PIN     A6
 
 #define ANZLOKS       4
 
@@ -159,6 +218,7 @@ float sinpos = 0;
 #define SPI_MISO  12
 #define SPI_MOSI  11
 #define SPI_MCP_CS    10
+
 
 
 
@@ -246,8 +306,15 @@ volatile uint8_t           bytepos = 0; // pos im Ablauf
 uint16_t                   tritarray[] = {LO,OPEN,HI};
 
 int achse0_startwert=0;
+uint8_t asciicounter = 0;
 
-//LiquidCrystal_I2C lcd(0x27,20,4); 
+LiquidCrystal_I2C lcd(
+  0x27,        // I2C-Adresse
+  2, 1, 0,    // EN, RW, RS  (PCF8574 Bits)
+  4, 5, 6, 7, // D4–D7      (PCF8574 Bits)
+  3,          // Backlight Bit
+  POSITIVE
+);
 
 void printHex8(uint8_t data) // prints 8-bit data in hex with leading zeroes
 {
@@ -310,7 +377,7 @@ void pakettimerfunction()
     HI     0xFEFE  // 1111111011111110
     */
    
-   digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
+   //digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
    
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
    
@@ -437,7 +504,15 @@ void setup()
 {
    // Serial.begin(9600);
    // Serial.begin(115200);
+   Wire.begin();
+   delay(100);
+   lcd.begin(20,4);
+   delay(100);
  //while (!Serial) ;
+
+   lcd.home ();                   // go home
+   lcd.print("H032 ESP"); 
+
    loopstatus |= (1<<FIRSTRUN); // Bit fuer tasks in erster Runde
    delay(100);
  //  analogWriteResolution(16); // 32767
@@ -446,7 +521,10 @@ void setup()
    paketTimer.priority(0);
    
    //stromTimer.begin(stromtimerfunction, 5000);
-   
+
+
+   pinMode(5, OUTPUT);
+   digitalWrite(5,1);
    pinMode(LOOPLED, OUTPUT);
    
    // FTM0   Pins: 5, 6, 9, 10, 20, 21, 22, 23
@@ -455,8 +533,8 @@ void setup()
    analogWriteFrequency(5, 50);
    // Serial.println(F("RawHID H0"));
  
-   pinMode(TAKT_PIN, OUTPUT);
-   digitalWriteFast(TAKT_PIN, LOW); // LO, OFF 
+   //pinMode(TAKT_PIN, OUTPUT);
+   //digitalWriteFast(TAKT_PIN, LOW); // LO, OFF 
 
    pinMode(OUT_PIN, OUTPUT);
    digitalWriteFast(OUT_PIN, LOW); // LO, OFF 
@@ -482,6 +560,39 @@ void setup()
    
    LCD_init();
    
+   //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
+   radio.begin();
+   
+   radio.openWritingPipe(pipeOut);
+   
+   radio.setChannel(124);
+   radio.setDataRate(RF24_2MBPS); // Set the speed of the transmission to the quickest available
+   
+   radio.setPALevel(RF24_PA_MAX); // Output power is set for maximum range  |  Çıkış gücü maksimum menzil için ayarlanıyor.
+   
+   radio.setPALevel(RF24_PA_MIN);
+   radio.setPALevel(RF24_PA_MAX);
+   radio.enableAckPayload();
+   radio.setRetries(0, 0);
+   radio.stopListening(); // Start the radio comunication for Transmitter | Verici için sinyal iletişimini başlatır.
+   if (radio.failureDetected)
+   {
+      radio.failureDetected = false;
+      delay(250);
+      lcd.setCursor(19,0);
+      lcd.println("-");
+   }
+   else
+   {
+      lcd.setCursor(19,0);
+
+      lcd.println("+");
+   }
+   // Serial.println("printDetails:");
+   // radio.printDetails();
+   
+   ResetData();
+
    
    mcp0.begin();
    /*
@@ -492,6 +603,7 @@ void setup()
     */
 
    //mcp0.gpioPinMode(0x00FF); // A Ausgang, B Eingang
+
    mcp0.gpioPinMode(0xFFFF); // alle input
    
    //mcp0.portPullup(0x00FF); 
@@ -833,7 +945,7 @@ void setup()
            // Serial.println(eepromadressbyte);
 //  lcd.print(eepromadressbyte);
  */ 
-   
+lcd.clear();
 
 }
 
@@ -841,9 +953,40 @@ void setup()
 void loop()
 {
 #pragma mark mcp
+      
+
+      
+
+
    if (sincemcp > 10)
    {
-      
+      if (radio.write(&data, sizeof(data)))
+      {
+         radiocounter++;
+         
+         // ********************
+         // ACK Payload ********
+         if (radio.isAckPayloadAvailable())
+         {
+            radio.read(&ackData, sizeof(ackData));
+            //localpotarray[2] = ackData[0];
+            //lokaladressearray[2] = 245;
+       
+         }
+         else
+         {
+            
+         }
+         // ********************
+         // ********************
+      }
+      else
+      {
+         // Serial.println("radio error\n");
+         digitalWrite(BUZZPIN, !(digitalRead(BUZZPIN)));
+         errcounter++;
+      }
+
       
       sincemcp = 0;
       // bit 0: Funktion
@@ -853,14 +996,13 @@ void loop()
       tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
 
       //240702: Tastencode invertiert, analog Trafo und H0-Interface
-      uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4;
+      uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4; // oberste 4 Bit diptasten
 
       tastenadresseA = (tastencodeA & 0xF0) >> 4;
 
-      //lokaladressearray[0] = (tastencodeA & 0xF0) >> 4;
       lokaladressearray[0] = 0xFF - tastencodeA_raw;
 
-      lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3
+      lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3 Richtung und Lampe
       
       for (uint8_t i=0;i<4;i++)
       {
@@ -886,7 +1028,7 @@ void loop()
 
       //lokaladressearray[1] = (tastencodeB & 0xF0) >> 4;
       
-      lokaladressearray[1] = 0xFF - tastencodeB_raw;
+      lokaladressearray[1] = 0xFF - tastencodeB_raw; // oberste 4 bit sind 1
       
       lokalcodearray[1] = tastencodeB & 0x0F;// Bit 0-3
 
@@ -910,7 +1052,7 @@ void loop()
       
       
       // Pot auslesen
-      for (uint8_t i=0;i<ANZLOKALLOKS;i++)
+      for (uint8_t i=0;i<ANZLOKALLOKS-1;i++)
       {
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
@@ -1016,18 +1158,63 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
+      //data.yaw = localpotarray[0];
+      data.yaw += 5;
+      if(data.yaw >= 200)
+      {
+       data.yaw = 100;
+      }
+      lcd.setCursor(0,1);
+      //lcd.print(data.yaw);
+      lcd.print(lokaladressearray[1]);
+      lcd.print(' ');
+      lcd.print(lokaladressearray[2]);
+
+
       sinceblink = 0;
       loopcounter++;
-      
+      lcd.setCursor(18,0);
+      lcd.print(char('A' + asciicounter));
+      asciicounter++;
+      asciicounter &= 0x1f;
+
+      lcd.setCursor(0,2);
+      lcd.print(ackData[0]);
+      lcd.print(' ');
+      lcd.print(ackData[1]);
+      lcd.print(' ');
+      lcd.print(ackData[2]);
+      lcd.print(' ');
+      lcd.print(ackData[3]);
+      lcd.print(' ');
+      lcd.setCursor(12,2);
+      lcd.print(localpotarray[2]);
+      lcd.print(' ');
+      lcd.print(localpotarray[1]);
+      lcd.setCursor(0,3);
+      lcd.print('R');
+      lcd.print(radiocounter);
+      lcd.setCursor(10,3);
+      lcd.print('E');
+      lcd.print(errcounter);
+
+      lcd.setCursor(9,0);
+      lcd.print(lokaladressearray[1]);
+      lcd.setCursor(13,0);
+      lcd.print(lokalcodearray[1]);
+      lcd.print(' ');
+      lcd.print(diptastenadresseB);
+
+
       //_delay_ms(10);
       //pinMode(LOOPLED, OUTPUT);
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
       //lcd_putc('a');
       //lcd_puts("blink");
-      lcd_gotoxy(8, 0);
-      lcd_putc('U');
-      lcd_puthex(usbtask);
-      lcd_putc('*');
+      //lcd_gotoxy(8, 0);
+      //lcd_putc('U');
+      //lcd_puthex(usbtask);
+      //lcd_putc('*');
       
       //lcd_gotoxy(0, 3);
       //lcd_puthex(tastencodeA);
@@ -1046,7 +1233,7 @@ void loop()
          lcd_puts("USB  ");
          if(loknummer == 0)
          {
-           lcd_gotoxy(0, 3); 
+            lcd_gotoxy(0, 3); 
             lcd_putint1(loknummer);
             lcd_putc(' ');
             lcd_putint1(usbadressearray[0]);
