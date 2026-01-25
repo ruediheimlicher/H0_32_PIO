@@ -64,21 +64,6 @@
 
 
 
-// instantiate an object for the nRF24L01 transceiver
-
-#define CE_PIN 4 // Teensy_FS: Pin 9
-#define CSN_PIN 23
-RF24 radio(CE_PIN, CSN_PIN);
-uint16_t errcounter = 0;
-uint16_t radiocounter = 0;
-const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter and Receiver code must be the same "0xABCDABCD71LL" | Verici ve Alıcı kodundaki adres aynı olmalıdır
-
-// ********************
-// ACK data ***********
-uint8_t ackData[4] = {31, 32, 33, 34};
-// ********************
-// ********************
-
 elapsedMillis zeitintervall;
 uint8_t sekundencounter = 0;
 elapsedMillis sinceLastBlink = 0;
@@ -377,7 +362,7 @@ void pakettimerfunction()
     HI     0xFEFE  // 1111111011111110
     */
    
-   //digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
+   digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
    
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
    
@@ -533,7 +518,7 @@ void setup()
    analogWriteFrequency(5, 50);
    // Serial.println(F("RawHID H0"));
  
-   //pinMode(TAKT_PIN, OUTPUT);
+   pinMode(TAKT_PIN, OUTPUT);
    //digitalWriteFast(TAKT_PIN, LOW); // LO, OFF 
 
    pinMode(OUT_PIN, OUTPUT);
@@ -558,8 +543,9 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   LCD_init();
+   //LCD_init();
    
+   /*
    //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
    radio.begin();
    
@@ -592,7 +578,7 @@ void setup()
    // radio.printDetails();
    
    ResetData();
-
+   */
    
    mcp0.begin();
    /*
@@ -960,34 +946,7 @@ void loop()
 
    if (sincemcp > 10)
    {
-      if (radio.write(&data, sizeof(data)))
-      {
-         radiocounter++;
-         
-         // ********************
-         // ACK Payload ********
-         if (radio.isAckPayloadAvailable())
-         {
-            radio.read(&ackData, sizeof(ackData));
-            //localpotarray[2] = ackData[0];
-            //lokaladressearray[2] = 245;
-       
-         }
-         else
-         {
-            
-         }
-         // ********************
-         // ********************
-      }
-      else
-      {
-         // Serial.println("radio error\n");
-         digitalWrite(BUZZPIN, !(digitalRead(BUZZPIN)));
-         errcounter++;
-      }
-
-      
+    
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
@@ -1178,26 +1137,13 @@ void loop()
       asciicounter++;
       asciicounter &= 0x1f;
 
-      lcd.setCursor(0,2);
-      lcd.print(ackData[0]);
-      lcd.print(' ');
-      lcd.print(ackData[1]);
-      lcd.print(' ');
-      lcd.print(ackData[2]);
-      lcd.print(' ');
-      lcd.print(ackData[3]);
-      lcd.print(' ');
+      
       lcd.setCursor(12,2);
       lcd.print(localpotarray[2]);
       lcd.print(' ');
       lcd.print(localpotarray[1]);
       lcd.setCursor(0,3);
-      lcd.print('R');
-      lcd.print(radiocounter);
-      lcd.setCursor(10,3);
-      lcd.print('E');
-      lcd.print(errcounter);
-
+      
       lcd.setCursor(9,0);
       lcd.print(lokaladressearray[1]);
       lcd.setCursor(13,0);
