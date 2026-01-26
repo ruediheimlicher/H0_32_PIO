@@ -66,7 +66,7 @@
 
 // instantiate an object for the nRF24L01 transceiver
 
-#define CE_PIN 5 // Teensy_FS: Pin 9
+#define CE_PIN 3 // Teensy_FS: Pin 9
 #define CSN_PIN 23
 RF24 radio(CE_PIN, CSN_PIN);
 uint16_t errcounter = 0;
