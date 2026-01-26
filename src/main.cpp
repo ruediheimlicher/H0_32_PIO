@@ -48,7 +48,7 @@
 
 #include <EEPROM.h>
 
-#include <RF24.h>
+//#include <RF24.h>
 //#include <RF24Network.h>
 
 // Load Wi-Fi library
@@ -62,22 +62,15 @@
 #define OLED_RESET  8
 //Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
-
+const int CS_PIN = 4;
+uint8_t tx[SPI_BUFFERSIZE] = {1,2,3,4,5,6,7,8};
+uint8_t rx[SPI_BUFFERSIZE];
 
 elapsedMillis zeitintervall;
 uint8_t sekundencounter = 0;
 elapsedMillis sinceLastBlink = 0;
 
-Signal data;
-void ResetData()
-{
-   data.throttle = 0;
-   data.pitch = 127;
-   data.roll = 127;
-   data.yaw = 127;
-   data.aux1 = 0;
-   data.aux2 = 0;
-}
+
 
 void OSZIA_HI(void)
 {
@@ -118,7 +111,7 @@ ADC *adc = new ADC(); // adc object
 
 #define TAKT_PIN     4
 #define OUT_PIN      2
-#define OUT_PIN_INV  1
+//#define OUT_PIN_INV  1
 
 #define CONTROL_PIN  6
 
@@ -362,7 +355,7 @@ void pakettimerfunction()
     HI     0xFEFE  // 1111111011111110
     */
    
-   digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
+   //digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
    
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
    
@@ -391,7 +384,7 @@ void pakettimerfunction()
    if (aktualcommand & (1<<commandpos))
    {
       digitalWriteFast(OUT_PIN,HIGH);
-      digitalWriteFast(OUT_PIN_INV,LOW);
+      //digitalWriteFast(OUT_PIN_INV,LOW);
       
       digitalWriteFast(CONTROL_PIN,HIGH);
       
@@ -399,7 +392,7 @@ void pakettimerfunction()
    else
    {
       digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
+      //digitalWriteFast(OUT_PIN_INV,HIGH);
       
       digitalWriteFast(CONTROL_PIN,LOW);
    }
@@ -413,7 +406,7 @@ void pakettimerfunction()
       digitalWriteFast(LOKSYNC,HIGH);
       
       digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
+      //digitalWriteFast(OUT_PIN_INV,HIGH);
       
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
@@ -506,10 +499,12 @@ void setup()
    paketTimer.priority(0);
    
    //stromTimer.begin(stromtimerfunction, 5000);
+   pinMode(CS_PIN, OUTPUT);
+  digitalWrite(CS_PIN, HIGH);
+  SPI.begin();
 
-
-   pinMode(5, OUTPUT);
-   digitalWrite(5,1);
+   //pinMode(5, OUTPUT);
+   //digitalWrite(5,1);
    pinMode(LOOPLED, OUTPUT);
    
    // FTM0   Pins: 5, 6, 9, 10, 20, 21, 22, 23
@@ -525,8 +520,8 @@ void setup()
    digitalWriteFast(OUT_PIN, LOW); // LO, OFF 
 
    // Signal Invertiert
-   pinMode(OUT_PIN_INV, OUTPUT);
-    digitalWriteFast(OUT_PIN_INV, HIGH); // HI, OFF 
+   //pinMode(OUT_PIN_INV, OUTPUT);
+   // digitalWriteFast(OUT_PIN_INV, HIGH); // HI, OFF 
 
    // Control
    pinMode(CONTROL_PIN, OUTPUT);
@@ -545,40 +540,7 @@ void setup()
    
    //LCD_init();
    
-   /*
-   //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
-   radio.begin();
    
-   radio.openWritingPipe(pipeOut);
-   
-   radio.setChannel(124);
-   radio.setDataRate(RF24_2MBPS); // Set the speed of the transmission to the quickest available
-   
-   radio.setPALevel(RF24_PA_MAX); // Output power is set for maximum range  |  Çıkış gücü maksimum menzil için ayarlanıyor.
-   
-   radio.setPALevel(RF24_PA_MIN);
-   radio.setPALevel(RF24_PA_MAX);
-   radio.enableAckPayload();
-   radio.setRetries(0, 0);
-   radio.stopListening(); // Start the radio comunication for Transmitter | Verici için sinyal iletişimini başlatır.
-   if (radio.failureDetected)
-   {
-      radio.failureDetected = false;
-      delay(250);
-      lcd.setCursor(19,0);
-      lcd.println("-");
-   }
-   else
-   {
-      lcd.setCursor(19,0);
-
-      lcd.println("+");
-   }
-   // Serial.println("printDetails:");
-   // radio.printDetails();
-   
-   ResetData();
-   */
    
    mcp0.begin();
    /*
@@ -946,13 +908,13 @@ void loop()
 
    if (sincemcp > 10)
    {
-    
+    //digitalWrite(CS_PIN, !(digitalRead,CS_PIN));
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
       
       // bit 4-7: Adresse lesen: SPI MCP23S17
-      tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
+   //   tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
 
       //240702: Tastencode invertiert, analog Trafo und H0-Interface
       uint8_t tastencodeA_raw = (tastencodeA & 0xF0) >> 4; // oberste 4 Bit diptasten
@@ -978,7 +940,7 @@ void loop()
          }
       }
       
-      tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
+    //  tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
           
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
 
@@ -1117,14 +1079,24 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
-      //data.yaw = localpotarray[0];
-      data.yaw += 5;
-      if(data.yaw >= 200)
+      SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+      digitalWrite(CS_PIN, LOW);
+      for (int i = 0; i < SPI_BUFFERSIZE; i++) 
       {
-       data.yaw = 100;
+         rx[i] = SPI.transfer(tx[i]);
       }
+      digitalWrite(CS_PIN, HIGH);
+      SPI.endTransaction();
+
+      lcd.setCursor(0,2);
+      lcd.print("TX: ");
+      lcd.print(tx[0]);
+      lcd.setCursor(8,2);
+      lcd.print("RX: ");
+      lcd.print(rx[0]);
+      tx[0] += 1;
+
       lcd.setCursor(0,1);
-      //lcd.print(data.yaw);
       lcd.print(lokaladressearray[1]);
       lcd.print(' ');
       lcd.print(lokaladressearray[2]);
@@ -1138,11 +1110,10 @@ void loop()
       asciicounter &= 0x1f;
 
       
-      lcd.setCursor(12,2);
+      lcd.setCursor(12,3);
       lcd.print(localpotarray[2]);
       lcd.print(' ');
       lcd.print(localpotarray[1]);
-      lcd.setCursor(0,3);
       
       lcd.setCursor(9,0);
       lcd.print(lokaladressearray[1]);

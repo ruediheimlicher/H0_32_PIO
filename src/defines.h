@@ -13,7 +13,7 @@
 #define BOARD_TEENSY 2 //TEENSY
 #define BOARD_6 6
 
-
+#define SPI_BUFFERSIZE  8
 #define OSZIA_PIN 8
 #define OSZIB_PIN 9
 
