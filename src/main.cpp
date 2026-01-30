@@ -75,7 +75,7 @@ const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter
 
 // ********************
 // ACK data ***********
-uint8_t ackData[4] = {31, 32, 33, 34};
+uint8_t ackData[8] = {31, 32, 33, 34, 35, 36, 37, 38};
 // ********************
 // ********************
 
@@ -86,12 +86,11 @@ elapsedMillis sinceLastBlink = 0;
 Signal data;
 void ResetData()
 {
-   data.throttle = 0;
-   data.pitch = 127;
-   data.roll = 127;
-   data.yaw = 127;
-   data.aux1 = 0;
-   data.aux2 = 0;
+   data.task = 0;
+   data.A = 127;
+   data.B = 127;
+   data.C= 127;
+
 }
 
 void OSZIA_HI(void)
@@ -591,7 +590,7 @@ void setup()
    // Serial.println("printDetails:");
    // radio.printDetails();
    
-   ResetData();
+   //ResetData();
 
    
    mcp0.begin();
@@ -654,11 +653,12 @@ void setup()
       // Serial.print("\n");
    }
  
-   taskarray[0][0] = adressearray[0];
+   
    
    eepromadressearray[0][0] = tritarray[buffer[8]];
 
    // paket 0
+   taskarray[0][0] = adressearray[0];
    taskarray[0][1] = adressearray[1];
    taskarray[0][2] = adressearray[2];
    taskarray[0][3] = adressearray[3];
@@ -1002,7 +1002,7 @@ void loop()
 
       lokaladressearray[0] = 0xFF - tastencodeA_raw;
 
-      lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3 Richtung und Lampe
+      lokalcodearray[0] = tastencodeA & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
       
       for (uint8_t i=0;i<4;i++)
       {
@@ -1057,6 +1057,9 @@ void loop()
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
       }
+
+
+      localpotarray[1] =  ackData[0];
       
    } // if (sincemcp )
    
@@ -1158,14 +1161,14 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
-      //data.yaw = localpotarray[0];
-      data.yaw += 5;
-      if(data.yaw >= 200)
+      //data.A = localpotarray[0];
+      //data.A += 5;
+      //if(data.A >= 200)
       {
-       data.yaw = 100;
+       //data.A = 100;
       }
       lcd.setCursor(0,1);
-      //lcd.print(data.yaw);
+      //lcd.print(data.A);
       lcd.print(lokaladressearray[1]);
       lcd.print(' ');
       lcd.print(lokaladressearray[2]);
@@ -1177,20 +1180,22 @@ void loop()
       lcd.print(char('A' + asciicounter));
       asciicounter++;
       asciicounter &= 0x1f;
-
+      //lcd.clear();
       lcd.setCursor(0,2);
       lcd.print(ackData[0]);
-      lcd.print(' ');
+      lcd.setCursor(4,2);
       lcd.print(ackData[1]);
-      lcd.print(' ');
+      lcd.setCursor(8,2);
       lcd.print(ackData[2]);
-      lcd.print(' ');
+      lcd.setCursor(12,2);
       lcd.print(ackData[3]);
       lcd.print(' ');
-      lcd.setCursor(12,2);
-      lcd.print(localpotarray[2]);
+      
+      lcd.setCursor(0,0);
+      lcd.print(localpotarray[0]);
       lcd.print(' ');
       lcd.print(localpotarray[1]);
+      
       lcd.setCursor(0,3);
       lcd.print('R');
       lcd.print(radiocounter);

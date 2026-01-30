@@ -10,12 +10,10 @@
 #include <util/delay.h>
 struct Signal 
 {
-   byte throttle;
-   byte pitch;
-   byte roll;
-   byte yaw;
-   byte aux1;
-   byte aux2;
+   byte task;
+   byte A;  
+   byte B;
+   byte C;;
    
 };
 
