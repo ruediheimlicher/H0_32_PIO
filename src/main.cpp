@@ -230,14 +230,23 @@ uint8_t regB = 0;
 
 volatile uint8_t tastencodeA = 0;
 volatile uint8_t tastencodeB = 0;
+volatile uint8_t tastencodeC = 0;
+volatile uint8_t tastencodeD = 0;
+
 uint8_t tastenstatusA = 0;
 //pi.__BEGIN_DECLS
 
 volatile uint8_t tastenadresseA = 0;
 volatile uint8_t tastenadresseB = 0;
+volatile uint8_t tastenadresseC = 0;
+volatile uint8_t tastenadresseD = 0;
+
 
 volatile uint8_t diptastenadresseA = 0; // dipschalter wird von links gelesen, bit 0 ist ganz links
 volatile uint8_t diptastenadresseB = 0;
+volatile uint8_t diptastenadresseC = 0; // dipschalter wird von links gelesen, bit 0 ist ganz links
+volatile uint8_t diptastenadresseD = 0;
+
 
 volatile uint8_t lokaladressearray[ANZLOKALLOKS] = {}; // Lok-Adressen
 volatile uint8_t lokalcodearray[ANZLOKALLOKS] = {}; // Lok-Codes (Richtung, Funktion)
