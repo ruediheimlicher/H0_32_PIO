@@ -86,12 +86,11 @@ elapsedMillis sinceLastBlink = 0;
 Signal data;
 void ResetData()
 {
-   data.throttle = 0;
-   data.pitch = 127;
-   data.roll = 127;
-   data.yaw = 127;
-   data.aux1 = 0;
-   data.aux2 = 0;
+    data.task = 0;
+   data.A = 127;
+   data.B = 127;
+   data.C= 127;
+
 }
 
 void OSZIA_HI(void)
@@ -968,7 +967,9 @@ void loop()
          // ACK Payload ********
          if (radio.isAckPayloadAvailable())
          {
+            
             radio.read(&ackData, sizeof(ackData));
+            radio.flush_rx();
             //localpotarray[2] = ackData[0];
             //lokaladressearray[2] = 245;
        
@@ -1059,6 +1060,9 @@ void loop()
       }
       
    } // if (sincemcp )
+
+      localpotarray[2] =  ackData[0];
+
    
 #pragma mark EMITTER 
    if (sinceemitter > 200)
@@ -1158,14 +1162,8 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
-      //data.yaw = localpotarray[0];
-      data.yaw += 5;
-      if(data.yaw >= 200)
-      {
-       data.yaw = 100;
-      }
+    
       lcd.setCursor(0,1);
-      //lcd.print(data.yaw);
       lcd.print(lokaladressearray[1]);
       lcd.print(' ');
       lcd.print(lokaladressearray[2]);
@@ -1177,6 +1175,7 @@ void loop()
       lcd.print(char('A' + asciicounter));
       asciicounter++;
       asciicounter &= 0x1f;
+      data.A = asciicounter;
 
       lcd.setCursor(0,2);
       lcd.print(ackData[0]);
