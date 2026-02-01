@@ -981,7 +981,10 @@ void loop()
             radio.flush_rx();
             localpotarray[2] = ackData[0];
             //lokaladressearray[2] = 245;
-            
+            tastencodeC = 0xFF - ackData[1];
+            uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
+
+
        
          }
          else
