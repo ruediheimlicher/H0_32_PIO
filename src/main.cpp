@@ -983,6 +983,7 @@ void loop()
             //lokaladressearray[2] = 245;
             tastencodeC = 0xFF - ackData[1];
             uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
+            tastenadresseC = (tastencodeC & 0xF0) >> 4;
 
 
        
