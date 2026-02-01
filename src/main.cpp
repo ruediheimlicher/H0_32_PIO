@@ -75,7 +75,7 @@ const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter
 
 // ********************
 // ACK data ***********
-uint8_t ackData[8] = {31, 32, 33, 34, 35, 36, 37, 38};
+volatile uint8_t ackData[8] = {31, 32, 33, 34, 35, 36, 37, 38};
 // ********************
 // ********************
 
@@ -191,6 +191,12 @@ volatile uint8_t loknummer = 0;
 
 volatile uint8_t speed = 0;
 
+volatile uint8_t speed1 = 0;
+volatile uint8_t speed2 = 0;
+
+volatile uint8_t lokchecknummer = 0;
+
+
 volatile uint8_t richtungcounter = 0; // mehrere richtungdatenpakete bei Richtungswechsel
 
 volatile uint8_t richtungstatus = 0;
@@ -230,14 +236,23 @@ uint8_t regB = 0;
 
 volatile uint8_t tastencodeA = 0;
 volatile uint8_t tastencodeB = 0;
+
+volatile uint8_t tastencodeC = 0;
+volatile uint8_t tastencodeD = 0;
 uint8_t tastenstatusA = 0;
 //pi.__BEGIN_DECLS
 
 volatile uint8_t tastenadresseA = 0;
 volatile uint8_t tastenadresseB = 0;
 
+volatile uint8_t tastenadresseC = 0;
+volatile uint8_t tastenadresseD = 0;
+
 volatile uint8_t diptastenadresseA = 0; // dipschalter wird von links gelesen, bit 0 ist ganz links
 volatile uint8_t diptastenadresseB = 0;
+
+volatile uint8_t diptastenadresseC = 0; // dipschalter wird von links gelesen, bit 0 ist ganz links
+volatile uint8_t diptastenadresseD = 0;
 
 volatile uint8_t lokaladressearray[ANZLOKALLOKS] = {}; // Lok-Adressen
 volatile uint8_t lokalcodearray[ANZLOKALLOKS] = {}; // Lok-Codes (Richtung, Funktion)
@@ -248,8 +263,8 @@ volatile uint8_t usbcodearray[4] = {}; // Lok-Codes (Richtung, Funktion)
 
 uint8_t tastenstatusB = 0;
 
-uint8_t potarray[ANZLOKS] = {};
-uint8_t localpotarray[ANZLOKALLOKS] = {};
+volatile uint8_t potarray[ANZLOKS] = {};
+volatile uint8_t localpotarray[ANZLOKALLOKS] = {};
 
 
 uint8_t lokalstatus = 0;
@@ -390,7 +405,7 @@ void pakettimerfunction()
          }
       
       // syncsignal
-      if ((sourcestatus & 0x01) && (paketpos == 0))// local
+      if ((sourcestatus & 0x01) && (paketpos == 1))// local
       {
          OSZI_A_LO();
          digitalWriteFast(LOKSYNC,LOW);
@@ -417,6 +432,9 @@ void pakettimerfunction()
       
       digitalWriteFast(CONTROL_PIN,LOW);
    }
+
+   //digitalWriteFast(LOKSYNC,HIGH);
+
    if (commandpos < 15)
    {
       commandpos++;
@@ -424,7 +442,7 @@ void pakettimerfunction()
    else 
    {
       commandpos = 0;
-      digitalWriteFast(LOKSYNC,HIGH);
+     // 
       
       digitalWriteFast(OUT_PIN,LOW);
       digitalWriteFast(OUT_PIN_INV,HIGH);
@@ -433,6 +451,7 @@ void pakettimerfunction()
       if (bytepos >= 20 + pause) // Paket fertig
       {
          bytepos = 0;
+         digitalWriteFast(LOKSYNC,HIGH);
          OSZI_A_HI();
          //OSZI_B_LO();
          if (paketpos < paketmax - 1)
@@ -442,6 +461,7 @@ void pakettimerfunction()
             {
                //
                //OSZI_B_HI();
+               //digitalWriteFast(LOKSYNC,HIGH);
                paketpos = 0;
             }
          }
@@ -557,7 +577,7 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   LCD_init();
+   //LCD_init();
    
    //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
    radio.begin();
@@ -725,10 +745,10 @@ void setup()
    taskarray[2][2] = adressearray[2];
    taskarray[2][3] = adressearray[3];
    taskarray[2][4] = HI; // Lampe
-   taskarray[2][5] = 0;//speedarray[0];
-   taskarray[2][6] = 0;//speedarray[1];
-   taskarray[2][7] = 0;//speedarray[2];
-   taskarray[2][8] = 0;//speedarray[3];
+   taskarray[2][5] = speedarray[0];
+   taskarray[2][6] = speedarray[1];
+   taskarray[2][7] = speedarray[2];
+   taskarray[2][8] = speedarray[3];
    
    // pause
    taskarray[2][9] = 0;
@@ -778,9 +798,9 @@ void setup()
    pinMode(POT_2_PIN, INPUT);
    pinMode(CURR_PIN, INPUT);
    
-   lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
+   //lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
    _delay_ms(100);
-   lcd_puts("Teensy");
+   //lcd_puts("Teensy");
 
    
    ADC_init();
@@ -955,9 +975,6 @@ void loop()
 #pragma mark mcp
       
 
-      
-
-
    if (sincemcp > 10)
    {
       if (radio.write(&data, sizeof(data)))
@@ -966,12 +983,33 @@ void loop()
          
          // ********************
          // ACK Payload ********
-         if (radio.isAckPayloadAvailable())
+         if (radio.isAckPayloadAvailable())   
          {
             radio.read(&ackData, sizeof(ackData));
-            //localpotarray[2] = ackData[0];
-            //lokaladressearray[2] = 245;
-       
+            localpotarray[2] = ackData[0];
+            //localpotarray[2] = 12;
+            tastencodeC = 0xFF - ackData[1];
+            uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
+            tastenadresseC = (tastencodeC & 0xF0) >> 4;
+            lokaladressearray[2] = 0xFF - tastencodeC_raw;
+            lokalcodearray[2] = tastencodeC & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
+
+            for (uint8_t i=0;i<4;i++)
+            {
+               if (tastenadresseC & (1<<(i)))
+               {
+                  diptastenadresseC &= ~(1<<2*i);
+                  diptastenadresseC &= ~(1<<(2*i+1));
+
+               }
+               else
+               {
+                  diptastenadresseC |= (1<<2*i);
+                  diptastenadresseC |= (1<<(2*i+1));
+               }
+            }
+
+
          }
          else
          {
@@ -986,8 +1024,8 @@ void loop()
          digitalWrite(BUZZPIN, !(digitalRead(BUZZPIN)));
          errcounter++;
       }
-
       
+
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
@@ -1052,14 +1090,12 @@ void loop()
       
       
       // Pot auslesen
-      for (uint8_t i=0;i<ANZLOKALLOKS-1;i++)
+      for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
       {
-         localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
+        localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
       }
-
-
-      localpotarray[1] =  ackData[0];
+      
       
    } // if (sincemcp )
    
@@ -1097,14 +1133,7 @@ void loop()
          {
             minanzeige = anzeige;
          }
-         /*
-         lcd_gotoxy(0, 3);
-         lcd_puts("I: ");
-         //lcd_putint(0xFF - emittermittel);
-         //lcd_putc(' ');
-         lcd_putint(emittermittel);
-         lcd_putc(' ');
-         */
+
       }
       else 
       {
@@ -1149,12 +1178,7 @@ void loop()
        //  lcd.setCursor(12,0);
        //  lcd.print(pot0);
        */
-       /*
-       lcd_gotoxy(12,1);
-       lcd_puthex(tastencodeA & 0x02);
-       lcd_gotoxy(12,2);
-       lcd_puthex(tastencodeB & 0x02);
-       */
+ 
    } // if sinceemitter
 
    
@@ -1168,18 +1192,28 @@ void loop()
        //data.A = 100;
       }
       lcd.setCursor(0,1);
+      lcd.print("                  ");
+      lcd.setCursor(0,1);
       //lcd.print(data.A);
+      lcd.print(localpotarray[1]);
+      lcd.setCursor(5,1);
       lcd.print(lokaladressearray[1]);
-      lcd.print(' ');
+
+      lcd.setCursor(10,1);
+      lcd.print(localpotarray[2]);
+      lcd.setCursor(15,1);
       lcd.print(lokaladressearray[2]);
 
+      lcd.setCursor(0,2);
+      lcd.print(lokchecknummer);
 
       sinceblink = 0;
       loopcounter++;
-      lcd.setCursor(18,0);
+      lcd.setCursor(19,0);
       lcd.print(char('A' + asciicounter));
       asciicounter++;
       asciicounter &= 0x1f;
+      /*
       //lcd.clear();
       lcd.setCursor(0,2);
       lcd.print(ackData[0]);
@@ -1190,11 +1224,13 @@ void loop()
       lcd.setCursor(12,2);
       lcd.print(ackData[3]);
       lcd.print(' ');
-      
+      */
       lcd.setCursor(0,0);
-      lcd.print(localpotarray[0]);
-      lcd.print(' ');
-      lcd.print(localpotarray[1]);
+      lcd.print("                    ");
+      lcd.setCursor(0,0);
+      lcd.print(speed1);
+      lcd.setCursor(10,0);
+      lcd.print(speed2);
       
       lcd.setCursor(0,3);
       lcd.print('R');
@@ -1203,41 +1239,27 @@ void loop()
       lcd.print('E');
       lcd.print(errcounter);
 
-      lcd.setCursor(9,0);
-      lcd.print(lokaladressearray[1]);
-      lcd.setCursor(13,0);
-      lcd.print(lokalcodearray[1]);
-      lcd.print(' ');
-      lcd.print(diptastenadresseB);
+      //lcd.setCursor(9,0);
+      //lcd.print(lokaladressearray[1]);
+      //lcd.setCursor(13,0);
+      //lcd.print(lokalcodearray[1]);
+      //lcd.print(' ');
+     //lcd.print(diptastenadresseB);
 
 
       //_delay_ms(10);
       //pinMode(LOOPLED, OUTPUT);
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
-      //lcd_putc('a');
-      //lcd_puts("blink");
-      //lcd_gotoxy(8, 0);
-      //lcd_putc('U');
-      //lcd_puthex(usbtask);
-      //lcd_putc('*');
-      
-      //lcd_gotoxy(0, 3);
-      //lcd_puthex(tastencodeA);
-      //lcd_putc(' ');
-      //lcd_puthex(tastenadresseA);
-      //lcd_putc(' ');
-      //lcd_puthex(tastencodeB);
-      //lcd_putc(' ');
-      //lcd_puthex(tastenadresseB);
 
-         
-      lcd_gotoxy(15, 0);
 
       if(sourcestatus == 2)
       {
+          lcd.setCursor(16,3);
+         lcd.print("USB");
          lcd_puts("USB  ");
          if(loknummer == 0)
          {
+
             lcd_gotoxy(0, 3); 
             lcd_putint1(loknummer);
             lcd_putc(' ');
@@ -1254,6 +1276,8 @@ void loop()
       }
      else if (sourcestatus == 1)
       {
+         lcd.setCursor(16,3);
+         lcd.print("LOC");
          lcd_puts("local");
 
          //lcd_gotoxy(0,3);
@@ -1279,21 +1303,7 @@ void loop()
 
       // Kanal A
       
-      lcd_gotoxy(0,1);
-      lcd_puts("A ");
-      lcd_puthex(diptastenadresseA);
-      //lcd_putc(' ');
-      //lcd_hextobin(diptastenadresseA);
-      lcd_putc(' ');
       
-      lcd_putint(localpotarray[0]);
-
-      //lcd_putc(' ');
-      //lcd_putint2(taskarray[0][5]);
-
-      //lcd_putc(' ');
-      //lcd_putint2(speed);
-      lcd_putc(' ');
       if(taskarray[0][4] == LO)
       {
          lcd_puts("OF");
@@ -1311,17 +1321,7 @@ void loop()
       //uint8_t strompos = (emittermittel)/10;
 
       //Kanal B:
-      
-      lcd_gotoxy(0,2);
-      lcd_puts("B ");
-      lcd_puthex(diptastenadresseB);
-      lcd_putc(' ');
-      //lcd_hextobin(diptastenadresseB);
-      //lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_putint2(taskarray[1][5]);
-      lcd_putc(' ');
+
       
       
       if(taskarray[1][4] == LO)
@@ -1334,92 +1334,17 @@ void loop()
       }
       
 
-      //lcd_putc(loopcounter & 0x07);
-      //lcd_putc(strompos);
-      /*
-      lcd_gotoxy(0, 2);
-      lcd_putint(localpotarray[0]);
-      lcd_putc(' ');
-      lcd_puthex(taskarray[0]);
-      lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_puthex(taskarray[1]);
-      */
 
-     // // Serial.print("speed: ");
-    // // Serial.print(speed);
-    //  // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
-      /*
-       // Serial.print("speed: ");
-       // Serial.print(speed);
-       // Serial.print("\n");
-       // Serial.print(" a: ");
-       // Serial.print(speed & (1<<0));
-       // Serial.print(" b: ");
-       // Serial.print(speed & (1<<1));
-       // Serial.print(" c: ");
-       // Serial.print(speed & (1<<2));
-       // Serial.print(" d: ");
-       // Serial.print(speed & (1<<3));
-       // Serial.print("\n");
-       */
+
+
        if (speed > 15)
        {
          speed = 0;
        }
        
-      /*
-       for (uint8_t i=0;i<4;i++)
-       {
-       //   // Serial.print(" i: ");
-       //   // Serial.print(i);
-       //   // Serial.print(" data: ");
-       //   // Serial.print(speed & (1<<i));
-       
-       if ((speed & (1<<i)) > 0)
-       {
-       //            // Serial.print(" HI");
-       commandarray0[i+5] = HI; 
-       commandarray0[i+17] = HI; 
-       }
-       else
-       {
-       //            // Serial.print(" LO");
-       commandarray0[i+5] = LO; 
-       commandarray0[i+17] = LO; 
-       }
-       //         // Serial.print("\n");
-       }
-       */
-      /*
-       // Serial.print("speed: ");
-       // Serial.print(" ");
-       // Serial.print(commandarray0[5]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[6]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[7]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[8]);
-       // Serial.print("\n");
-       */
-      //      speed++;
       
-      /*
-       uint8_t erfolg = ringbufferIn(erstepos);
-       
-       uint16_t anz = ringbufferCount();
-       // Serial.print("erfolg: ");
-       // Serial.print(erfolg);
-       // Serial.print(" anzahl: ");
-       // Serial.print(anz);
-       // Serial.print(" read: ");
-       // Serial.print(ringbuffer.read);
-       // Serial.print(" write: ");
-       // Serial.println(ringbuffer.write);
-       */
-      //// Serial.print("\n");
+      
+      
    } // if sincblinkk 500
    //loknummerTRITarray[0] = 3;
    #pragma mark USB
@@ -1841,17 +1766,7 @@ void loop()
                //// Serial.println(buffer[10]);
                //// Serial.println(buffer[11]);
                
-               /*
-               uint8_t eeprompos = 0x08;
-               EEPROM.update(eeprompos++,buffer[8]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[9]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[10]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[11]);
-               delay(10);
-               */
+ 
                
                // repetition adresse
                taskarray[1][12] = taskarray[1][0];
@@ -2197,6 +2112,7 @@ void loop()
                      //                // Serial.print("\n");
                   }
                }
+               
                /*
                 for (int i=5; i<9; i++) 
                 {
@@ -2354,7 +2270,10 @@ void loop()
      // if (digitalReadFast(SOURCECONTROL) == 1)
       for (uint8_t localnum = 0;localnum < ANZLOKALLOKS;localnum++)
       {
-         
+         if(localnum == 1)
+         {
+            lokchecknummer = localpotarray[localnum];
+         }
          loknummer =localnum;
          //loknummer = !loknummer;
           for (uint8_t i=0;i<4;i++)
@@ -2381,6 +2300,15 @@ void loop()
          // speed
          
          uint8_t speed_raw = localpotarray[localnum] >> 4; // 0: halt 1: richtung 2-5: speed
+         if(localnum == 1)
+         {
+            speed1 = speed_raw;
+         }
+         if(localnum == 2)
+         {
+            speed2 = speed_raw;
+         }
+         
          if (speed_raw > 0)
          {
             speed_raw += 1; // speed 1 ist Richtungsumschaltung
@@ -2390,50 +2318,12 @@ void loop()
             speed_raw = 15;
          }
          
-          /*
-          if (richtungstatus & (1<<RICHTUNGSTART)) // Richtungswechsel im Gang
-          {
-            richtungcounter++;
-            if (richtungcounter > 4)
-            {
-               richtungstatus &= ~(1<<RICHTUNGSTART); // Richtungswechsel beenden
-            taskarray[localnum][5] = HI; // Richtungbit reset
-            richtungcounter = 0;
-            }
-          }
-
-          */
-         
-            uint8_t speed_red = 0;
-
-            //       // Serial.print("local speed_raw 0: ");
-            //       // Serial.println(speed_raw);
-            //       //  lcd.setCursor(0,0);
-            //       //  lcd.print("Lok0");
            
-         /*   
-
-         lcd_gotoxy(0, 0);
-         lcd_puts("Lok");
-         lcd_putint1(localnum);
-         lcd_putc(' ');
-         lcd_puthex(speed_raw);
-         lcd_putc(' ');
-         if (speed_raw < 10)
-         {
-            lcd_puts("min");
-  //          //  lcd.print(" ");
-         }
-         else
-         {
-            lcd_putint(speed_raw);
-            // //  lcd.print("speed ");
-         }
-//         //  lcd.print(speed_raw);
-         */
+         
                  
          
-#pragma mark local speed
+            #pragma mark local speed
+            
          if (speed_raw < 2) // stillstand oder Richtungswachsel
          {
             
@@ -2457,7 +2347,7 @@ void loop()
          } // if speed_raw < 2
          else 
          {
-            uint8_t speed_full = localpotarray[localnum] ; //8-bit Wert, 
+            //uint8_t speed_full = localpotarray[localnum] ; //8-bit Wert, 
             speed = speed_raw;
             
             // speed setzen
@@ -2475,6 +2365,7 @@ void loop()
 //                 // Serial.print("1");
                   speedarray[i] = HI; 
                   taskarray[localnum][5+i] = HI;
+                  
                }
                else
                {
@@ -2487,29 +2378,7 @@ void loop()
          } // speed_raw >= 2
          localspeedarray[localnum] = speed;
          
-         /*   
-         for (int i=5; i<9; i++) 
-         {
-            if (taskarray[localnum][i] == 0xFEFE)
-            {
-               // Serial.print("1");
-            }
-            else 
-            {
-               // Serial.print("0");
-            }
-            //// Serial.print(taskarray[localnum][i]);
-            
-         }
-         // Serial.print("\n");
-         */
-         // rep speed
-         /*
-         taskarray[localnum][17] = taskarray[localnum][5];
-         taskarray[localnum][18] = taskarray[localnum][6];
-         taskarray[localnum][19] = taskarray[localnum][7];
-         taskarray[localnum][20] = taskarray[localnum][8];
-         */
+      
    
          // Richtung
           
