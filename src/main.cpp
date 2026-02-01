@@ -981,13 +981,12 @@ void loop()
             radio.flush_rx();
             localpotarray[2] = ackData[0];
             //lokaladressearray[2] = 245;
-            //tastencodeC = 0xFF - ackData[1];
             tastencodeC = ackData[1];
 
             uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
             tastenadresseC = (tastencodeC & 0xF0) >> 4;
             lokaladressearray[2] = 0xFF - tastencodeC_raw;
-            //lokalcodearray[2] = tastencodeC & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
+            lokalcodearray[2] = tastencodeC & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
 
 
        
