@@ -970,8 +970,9 @@ void loop()
             
             radio.read(&ackData, sizeof(ackData));
             radio.flush_rx();
-            //localpotarray[2] = ackData[0];
+            localpotarray[2] = ackData[0];
             //lokaladressearray[2] = 245;
+            
        
          }
          else
