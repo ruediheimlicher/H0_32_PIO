@@ -202,7 +202,23 @@ void lcd_putint12(uint16_t zahl)
       zahl /= 10;
    }
    lcd_puts(string);
+   
 }
+void lcdputint12(char* zahlstring,uint16_t zahl)
+{
+   char string[5];
+   int8_t i;                             // schleifenzähler
+   
+   string[4]='\0';                       // String Terminator
+   for(i=3; i>=0; i--)
+   {
+      string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
+      zahl /= 10;
+   }
+   //return(string);
+   
+}
+
 
 
 void lcd_putint16(uint16_t zahl)
@@ -606,7 +622,7 @@ void lcd_put_zeit(uint8_t minuten, uint8_t stunden)
 
 void lcd_put_wochentag(uint8_t wd)
 {
-   char* wochentag[] = {"MO","DI","MI","DO","FR","SA","SO"};
+   const char* wochentag[] = {"MO","DI","MI","DO","FR","SA","SO"};
    
    lcd_puts(wochentag[wd-1]);   // Array wochentag ist null-basiert
 }

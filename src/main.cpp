@@ -270,7 +270,7 @@ elapsedMillis sincelocalrichtung;
 
 uint8_t potpinarray[4] = {POT_0_PIN,POT_1_PIN,POT_2_PIN,POT_3_PIN};
 
-char* buffercode[4] = {"BUFFER_FAIL","BUFFER_SUCCESS", "BUFFER_FULL", "BUFFER_EMPTY"};
+const char* buffercode[4] = {"BUFFER_FAIL","BUFFER_SUCCESS", "BUFFER_FULL", "BUFFER_EMPTY"};
 
 // Prototypes
 // !!! Help: http://bit.ly/2l0ZhTa
@@ -306,7 +306,7 @@ volatile uint8_t           pause = PAUSE;
 volatile uint8_t           richtung = 1; // vorwaerts
 
 volatile uint8_t           paketpos = 0;
-volatile uint8_t           paketmax = ANZLOKS;
+volatile uint8_t           paketmax = 2*ANZLOKS;
 
 volatile uint8_t           commandpos = 0; // pos im command
 volatile uint8_t           bytepos = 0; // pos im Ablauf
@@ -399,7 +399,7 @@ void pakettimerfunction()
          }
       
       // syncsignal
-      if ((sourcestatus & 0x01) && (paketpos == 0))// local
+      if ((sourcestatus & 0x01) && (paketpos == 1))// local
       {
          OSZI_A_LO();
          digitalWriteFast(LOKSYNC,LOW);
@@ -479,6 +479,22 @@ void LCD_init(void)
    digitalWrite(LCD_CLOCK_PIN,1);
 
 }
+
+void lcdputint3(uint16_t zahl)     // int bis 1000
+{
+   char string[4];
+   int8_t i;                             // schleifenzähler
+   
+   string[3]='\0';                       // String Terminator
+   for(i=2; i>=0; i--)
+   {
+      string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
+      zahl /= 10;
+   }
+   lcd.print(string);
+}
+
+
 
 void ADC_init(void) 
 {
@@ -662,11 +678,11 @@ void setup()
       // Serial.print("\n");
    }
  
-   taskarray[0][0] = adressearray[0];
    
    eepromadressearray[0][0] = tritarray[buffer[8]];
 
    // paket 0
+   taskarray[0][0] = adressearray[0];
    taskarray[0][1] = adressearray[1];
    taskarray[0][2] = adressearray[2];
    taskarray[0][3] = adressearray[3];
@@ -733,10 +749,10 @@ void setup()
    taskarray[2][2] = adressearray[2];
    taskarray[2][3] = adressearray[3];
    taskarray[2][4] = HI; // Lampe
-   taskarray[2][5] = 0;//speedarray[0];
-   taskarray[2][6] = 0;//speedarray[1];
-   taskarray[2][7] = 0;//speedarray[2];
-   taskarray[2][8] = 0;//speedarray[3];
+   taskarray[2][5] = speedarray[0];
+   taskarray[2][6] = speedarray[1];
+   taskarray[2][7] = speedarray[2];
+   taskarray[2][8] = speedarray[3];
    
    // pause
    taskarray[2][9] = 0;
@@ -979,8 +995,9 @@ void loop()
             
             radio.read(&ackData, sizeof(ackData));
             radio.flush_rx();
-            localpotarray[2] = ackData[0];
-            //lokaladressearray[2] = 245;
+
+            localpotarray[2] =  ackData[0];
+            localpotarray[3] =  ackData[2];
             tastencodeC = ackData[1];
 
             uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
@@ -988,6 +1005,10 @@ void loop()
             lokaladressearray[2] = 0xFF - tastencodeC_raw;
             lokalcodearray[2] = tastencodeC & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
 
+            tastencodeD = ackData[3];
+            uint8_t tastencodeD_raw = (tastencodeD & 0xF0) >> 4; // oberste 4 Bit diptasten
+            lokaladressearray[3] = 0xFF - tastencodeD_raw;
+            lokalcodearray[3] = tastencodeD & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
 
        
          }
@@ -1070,7 +1091,7 @@ void loop()
       
       
       // Pot auslesen
-      for (uint8_t i=0;i<ANZLOKALLOKS-1;i++)
+      for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
       {
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
@@ -1078,7 +1099,7 @@ void loop()
       
    } // if (sincemcp )
 
-      localpotarray[2] =  ackData[0];
+     
 
    
 #pragma mark EMITTER 
@@ -1180,46 +1201,92 @@ void loop()
    if (sinceblink > 500)
    {
     
+    lcd.setCursor(0,0);
+      lcdputint3(localpotarray[0]);
+      lcd.setCursor(4,0);
+      lcdputint3(localpotarray[1]);
+       lcd.setCursor(8,0);
+      lcdputint3(localpotarray[2]);
+      lcd.setCursor(12,0);
+      lcdputint3(localpotarray[3]);
+
+
       lcd.setCursor(0,1);
-      lcd.print(lokaladressearray[1]);
-      lcd.print(' ');
-      lcd.print(lokaladressearray[2]);
+      lcdputint3(lokaladressearray[0]);
+      lcd.setCursor(4,1);
+      lcdputint3(lokaladressearray[1]);
+      lcd.setCursor(8,1);
+      lcdputint3(lokaladressearray[2]);
+      lcd.setCursor(12,1);
+      lcdputint3(lokaladressearray[3]);
 
 
       sinceblink = 0;
       loopcounter++;
-      lcd.setCursor(18,0);
+      lcd.setCursor(19,0);
       lcd.print(char('A' + asciicounter));
       asciicounter++;
       asciicounter &= 0x1f;
       data.A = asciicounter;
 
+      char buf[4];
+      uint8_t ack0 = ackData[0];
+      if(ack0 < 10)
+      {
+         sprintf(buf, "%1d",ack0);
+      }
+      else if (ack0 < 100)
+      {
+         sprintf(buf, "0%2d",ack0);
+      }
+      else
+      {
+         sprintf(buf, "0%d",ack0);
+      }
+      //sprintf(buf, "0%1d",ackData[0]);
+
+      /*
       lcd.setCursor(0,2);
-      lcd.print(ackData[0]);
-      lcd.print(' ');
-      lcd.print(ackData[1]);
-      lcd.print(' ');
-      lcd.print(ackData[2]);
-      lcd.print(' ');
-      lcd.print(ackData[3]);
-      lcd.print(' ');
+      lcdputint3(ackData[0]);
+      lcd.setCursor(4,2);
+      lcdputint3(ackData[1]);
+      
+      lcd.setCursor(8,2);
+      lcdputint3(ackData[2]);
       lcd.setCursor(12,2);
-      lcd.print(localpotarray[2]);
-      lcd.print(' ');
-      lcd.print(localpotarray[1]);
+      lcdputint3(ackData[3]);
+      */
+      uint8_t index = 3;
+      lcd.setCursor(0,2);
+      lcdputint3(taskarray[index][0]);
+      lcd.setCursor(4,2);
+      lcdputint3(taskarray[index][1]);
+      
+      lcd.setCursor(8,2);
+      lcdputint3(taskarray[index][2]);
+      lcd.setCursor(12,2);
+      lcdputint3(taskarray[index][3]);
+
+
+      lcd.setCursor(0,3);
+      lcdputint3(localpotarray[0]);
+      lcd.setCursor(4,3);
+      lcdputint3(localpotarray[1]);
+      lcd.setCursor(8,3);
+      lcdputint3(localpotarray[2]);
+      lcd.setCursor(12,3);
+      lcdputint3(localpotarray[3]);
+      /*
       lcd.setCursor(0,3);
       lcd.print('R');
       lcd.print(radiocounter);
       lcd.setCursor(10,3);
       lcd.print('E');
       lcd.print(errcounter);
-
-      lcd.setCursor(9,0);
-      lcd.print(lokaladressearray[1]);
-      lcd.setCursor(13,0);
-      lcd.print(lokalcodearray[1]);
-      lcd.print(' ');
-      lcd.print(diptastenadresseB);
+      */
+     
+      //lcd.print(' ');
+      //lcd.print(diptastenadresseB);
 
 
       //_delay_ms(10);
@@ -1277,7 +1344,7 @@ void loop()
          lcd_putint1(loknummerTRITarray[3]);
          */
       }
-/*
+         /*
          lcd_gotoxy(0,3);
          lcd_putint12(loknummerTRITarray[0]);
          lcd_putc(' ');
@@ -1286,7 +1353,7 @@ void loop()
          lcd_putint12(loknummerTRITarray[2]);
          lcd_putc(' ');
          lcd_putint12(loknummerTRITarray[3]);
-*/
+         */
 
       // Kanal A
       
@@ -1432,6 +1499,8 @@ void loop()
        */
       //// Serial.print("\n");
    } // if sincblinkk 500
+
+
    //loknummerTRITarray[0] = 3;
    #pragma mark USB
    int n;
@@ -2415,13 +2484,7 @@ void loop()
 
           */
          
-            uint8_t speed_red = 0;
 
-            //       // Serial.print("local speed_raw 0: ");
-            //       // Serial.println(speed_raw);
-            //       //  lcd.setCursor(0,0);
-            //       //  lcd.print("Lok0");
-           
          /*   
 
          lcd_gotoxy(0, 0);
