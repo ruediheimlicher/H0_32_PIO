@@ -190,6 +190,7 @@ volatile uint16_t loknummerTRITarray[ANZLOKS] = {0};
 volatile uint8_t loknummer = 0;
 
 volatile uint8_t speed = 0;
+volatile uint8_t speed_raw = 0;
 
 volatile uint8_t richtungcounter = 0; // mehrere richtungdatenpakete bei Richtungswechsel
 
@@ -255,10 +256,16 @@ volatile uint8_t usbadressearray[4] = {}; // Lok-Adressen
 volatile uint8_t usbcodearray[4] = {}; // Lok-Codes (Richtung, Funktion)
 
 
+
 uint8_t tastenstatusB = 0;
 
 uint8_t potarray[ANZLOKS] = {};
 uint8_t localpotarray[ANZLOKALLOKS] = {};
+volatile uint8_t speedraw0 = 0;
+volatile uint8_t speedraw1 = 0;
+volatile uint8_t speedraw2 = 0;
+volatile uint8_t speedraw3 = 0;
+
 
 
 uint8_t lokalstatus = 0;
@@ -1091,6 +1098,7 @@ void loop()
       
       
       // Pot auslesen
+      
       for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
       {
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
@@ -1212,13 +1220,13 @@ void loop()
 
 
       lcd.setCursor(0,1);
-      lcdputint3(lokaladressearray[0]);
+      lcdputint3(speedraw0);
       lcd.setCursor(4,1);
-      lcdputint3(lokaladressearray[1]);
+      lcdputint3(speedraw1);
       lcd.setCursor(8,1);
-      lcdputint3(lokaladressearray[2]);
+      lcdputint3(speedraw2);
       lcd.setCursor(12,1);
-      lcdputint3(lokaladressearray[3]);
+      lcdputint3(speedraw3);
 
 
       sinceblink = 0;
@@ -2459,8 +2467,29 @@ void loop()
           taskarray[localnum][15] = taskarray[localnum][3] ;
 
          // speed
-         
+       
          uint8_t speed_raw = localpotarray[localnum] >> 4; // 0: halt 1: richtung 2-5: speed
+         switch (localnum)
+         {
+            case 0:
+            {
+               speedraw0 = localpotarray[localnum];
+            }break;
+            case 1:
+            {
+               speedraw1 = localpotarray[localnum];
+            }break;
+            case 2:
+            {
+               speedraw2 = localpotarray[localnum];
+            }break;
+            case 3:
+            {
+               speedraw3 = localpotarray[localnum];
+            }break;
+         }
+
+         
          if (speed_raw > 0)
          {
             speed_raw += 1; // speed 1 ist Richtungsumschaltung
@@ -2485,26 +2514,7 @@ void loop()
           */
          
 
-         /*   
-
-         lcd_gotoxy(0, 0);
-         lcd_puts("Lok");
-         lcd_putint1(localnum);
-         lcd_putc(' ');
-         lcd_puthex(speed_raw);
-         lcd_putc(' ');
-         if (speed_raw < 10)
-         {
-            lcd_puts("min");
-  //          //  lcd.print(" ");
-         }
-         else
-         {
-            lcd_putint(speed_raw);
-            // //  lcd.print("speed ");
-         }
-//         //  lcd.print(speed_raw);
-         */
+  
                  
          
 #pragma mark local speed
@@ -2531,34 +2541,37 @@ void loop()
          } // if speed_raw < 2
          else 
          {
-            uint8_t speed_full = localpotarray[localnum] ; //8-bit Wert, 
+            //uint8_t speed_full = localpotarray[localnum] ; //8-bit Wert, 
             speed = speed_raw;
             
             // speed setzen
+          
             
-//            // Serial.print("speed 0: ");
- //           // Serial.println(speed);
- 
+            
             for (uint8_t i=0;i<4;i++)
             {
- //              // Serial.print(" i: "); // Serial.print(i);
- //              // Serial.print(" data: ");// Serial.print(speed & (1<<i));
- //              // Serial.print("\n");
+   
                if (speed & (1<<i))
                {
-//                 // Serial.print("1");
+                  //                 // Serial.print("1");
                   speedarray[i] = HI; 
                   taskarray[localnum][5+i] = HI;
+                  //taskarray[2][5+i] = HI;
+                  
                }
                else
                {
-    //              // Serial.print("0");
+                  //              // Serial.print("0");
                   speedarray[i] = LO; 
                   taskarray[localnum][5+i] = LO;
+                  //taskarray[2][5+i] = LO;
+                  
                }
-    //           // Serial.print("\n");
+            //           // Serial.print("\n");
             }
          } // speed_raw >= 2
+         
+
          localspeedarray[localnum] = speed;
          
          /*   
@@ -2584,7 +2597,7 @@ void loop()
          taskarray[localnum][19] = taskarray[localnum][7];
          taskarray[localnum][20] = taskarray[localnum][8];
          */
-   
+        
          // Richtung
           
          
@@ -2635,7 +2648,7 @@ void loop()
                  
               }
            }
-         
+
          
          // repetition speed 
           taskarray[localnum][17] = taskarray[localnum][5]; // auch richtung
@@ -2648,19 +2661,49 @@ void loop()
          {
             taskarray[localnum][4] = HI; 
             taskarray[localnum][16] = HI; // rep
-//            //  lcd.setCursor(12,1);
-//            //  lcd.print("ON ");
+            //            //  lcd.setCursor(12,1);
+            //            //  lcd.print("ON ");
             
          }
          else
          {
             taskarray[localnum][4] = LO;
             taskarray[localnum][16] = LO; // rep
- //           //  lcd.setCursor(12,1);
- //           //  lcd.print("OFF");
+            //           //  lcd.setCursor(12,1);
+            //           //  lcd.print("OFF");
             
          }
-      }
+      } // for localnum
+         
+         // exp
+         /*
+         {
+            taskarray[2][5] = taskarray[0][5]; // auch richtung
+            taskarray[2][6] = taskarray[0][6];
+            taskarray[2][7] = taskarray[0][7];
+            taskarray[2][8] = taskarray[0][8];
+
+            taskarray[2][17] = taskarray[0][5]; // auch richtung
+            taskarray[2][18] = taskarray[0][6];
+            taskarray[2][19] = taskarray[0][7];
+            taskarray[2][20] = taskarray[0][8];
+
+         }
+         
+         {
+            taskarray[3][5] = taskarray[1][5]; // auch richtung
+            taskarray[3][6] = taskarray[1][6];
+            taskarray[3][7] = taskarray[1][7];
+            taskarray[3][8] = taskarray[1][8];
+
+            taskarray[3][17] = taskarray[1][5]; // auch richtung
+            taskarray[3][18] = taskarray[1][6];
+            taskarray[3][19] = taskarray[1][7];
+            taskarray[3][20] = taskarray[1][8];
+
+         }
+         */
+
    } // local
    
 
