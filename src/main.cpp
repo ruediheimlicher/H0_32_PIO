@@ -265,6 +265,7 @@ volatile uint8_t speedraw0 = 0;
 volatile uint8_t speedraw1 = 0;
 volatile uint8_t speedraw2 = 0;
 volatile uint8_t speedraw3 = 0;
+uint8_t speedrawcounter = 0;
 
 
 
@@ -409,7 +410,7 @@ void pakettimerfunction()
       if ((sourcestatus & 0x01) && (paketpos == 1))// local
       {
          OSZI_A_LO();
-         digitalWriteFast(LOKSYNC,LOW);
+         //digitalWriteFast(LOKSYNC,LOW);
       }
       //
       else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
@@ -440,7 +441,7 @@ void pakettimerfunction()
    else 
    {
       commandpos = 0;
-      digitalWriteFast(LOKSYNC,HIGH);
+      //digitalWriteFast(LOKSYNC,HIGH);
       
       digitalWriteFast(OUT_PIN,LOW);
       digitalWriteFast(OUT_PIN_INV,HIGH);
@@ -1105,6 +1106,7 @@ void loop()
          sendbuffer[16+i] = localpotarray[i];
       }
       
+      
    } // if (sincemcp )
 
      
@@ -1209,7 +1211,7 @@ void loop()
    if (sinceblink > 500)
    {
     
-    lcd.setCursor(0,0);
+      lcd.setCursor(0,0);
       lcdputint3(localpotarray[0]);
       lcd.setCursor(4,0);
       lcdputint3(localpotarray[1]);
@@ -1218,7 +1220,7 @@ void loop()
       lcd.setCursor(12,0);
       lcdputint3(localpotarray[3]);
 
-
+      /*
       lcd.setCursor(0,1);
       lcdputint3(speedraw0);
       lcd.setCursor(4,1);
@@ -1227,7 +1229,9 @@ void loop()
       lcdputint3(speedraw2);
       lcd.setCursor(12,1);
       lcdputint3(speedraw3);
-
+      lcd.setCursor(16,1);
+      lcdputint3(speedrawcounter);
+      */
 
       sinceblink = 0;
       loopcounter++;
@@ -1237,6 +1241,7 @@ void loop()
       asciicounter &= 0x1f;
       data.A = asciicounter;
 
+      /*
       char buf[4];
       uint8_t ack0 = ackData[0];
       if(ack0 < 10)
@@ -1252,7 +1257,7 @@ void loop()
          sprintf(buf, "0%d",ack0);
       }
       //sprintf(buf, "0%1d",ackData[0]);
-
+      */
       /*
       lcd.setCursor(0,2);
       lcdputint3(ackData[0]);
@@ -1264,6 +1269,7 @@ void loop()
       lcd.setCursor(12,2);
       lcdputint3(ackData[3]);
       */
+     /*
       uint8_t index = 3;
       lcd.setCursor(0,2);
       lcdputint3(taskarray[index][0]);
@@ -1274,16 +1280,9 @@ void loop()
       lcdputint3(taskarray[index][2]);
       lcd.setCursor(12,2);
       lcdputint3(taskarray[index][3]);
+      */
 
-
-      lcd.setCursor(0,3);
-      lcdputint3(localpotarray[0]);
-      lcd.setCursor(4,3);
-      lcdputint3(localpotarray[1]);
-      lcd.setCursor(8,3);
-      lcdputint3(localpotarray[2]);
-      lcd.setCursor(12,3);
-      lcdputint3(localpotarray[3]);
+      
       /*
       lcd.setCursor(0,3);
       lcd.print('R');
@@ -1691,7 +1690,7 @@ void loop()
                //// Serial.print("usbtaskask 0xB0");
                //     taskarray[0][4] = tritarray[(buffer[16] & 0x01)]; // Licht, bit 0
                
-               uint8_t speed_raw = buffer[17]; // 0: halt 1: richtung 2-5: speed
+               speed_raw  = buffer[17]; // 0: halt 1: richtung 2-5: speed
                uint8_t speed_red = 0;
                //             // Serial.print("speed_raw 0: ");
                //             // Serial.println(speed_raw);
@@ -1976,7 +1975,7 @@ void loop()
                //// Serial.print("usbtaskask 0xB0");
                //     taskarray[1][4] = tritarray[(buffer[16] & 0x01)]; // Licht, bit 0
                
-               uint8_t speed_raw = buffer[17]; // 0: halt 1: richtung 2-5: speed
+               speed_raw = buffer[17]; // 0: halt 1: richtung 2-5: speed
                uint8_t speed_red = 0;
                //// Serial.print("speed_raw 0: ");
                //// Serial.println(speed_raw);
@@ -2235,7 +2234,7 @@ void loop()
                //// Serial.print("usbtaskask 0xB0");
                //     taskarray[2][4] = tritarray[(buffer[16] & 0x01)]; // Licht, bit 0
                
-               uint8_t speed_raw = buffer[17]; // 0: halt 1: richtung 2-5: speed
+               speed_raw = buffer[17]; // 0: halt 1: richtung 2-5: speed
                uint8_t speed_red = 0;
                //// Serial.print("speed_raw 0: ");
                //// Serial.println(speed_raw);
@@ -2440,6 +2439,7 @@ void loop()
    else if (sourcestatus & 0x01)
    {
      // if (digitalReadFast(SOURCECONTROL) == 1)
+     
       for (uint8_t localnum = 0;localnum < ANZLOKALLOKS;localnum++)
       {
          
@@ -2467,28 +2467,40 @@ void loop()
           taskarray[localnum][15] = taskarray[localnum][3] ;
 
          // speed
-       
-         uint8_t speed_raw = localpotarray[localnum] >> 4; // 0: halt 1: richtung 2-5: speed
+         
+         speed_raw = localpotarray[localnum] >> 4; // 0: halt 1: richtung 2-5: speed
+         
+         /*
          switch (localnum)
          {
             case 0:
             {
-               speedraw0 = localpotarray[localnum];
+               speedraw0 = localpotarray[localnum] >> 4;
             }break;
             case 1:
             {
-               speedraw1 = localpotarray[localnum];
+               speedraw1 = localpotarray[localnum] >> 4;
             }break;
             case 2:
             {
-               speedraw2 = localpotarray[localnum];
+               //speedrawcounter++;
+               
+               speedraw2 = localpotarray[localnum] >> 4;
+               if (speedraw2 > 0)
+               {
+                  speedraw2 += 1; // speed 1 ist Richtungsumschaltung
+               }
+               if (speedraw2 > 15)
+               {
+                  speedraw2 = 15;
+               }
             }break;
             case 3:
             {
-               speedraw3 = localpotarray[localnum];
+               speedraw3 = localpotarray[localnum] >> 4;
             }break;
          }
-
+         */
          
          if (speed_raw > 0)
          {
@@ -2499,25 +2511,24 @@ void loop()
             speed_raw = 15;
          }
          
-          /*
-          if (richtungstatus & (1<<RICHTUNGSTART)) // Richtungswechsel im Gang
-          {
-            richtungcounter++;
-            if (richtungcounter > 4)
+            /*
+            if (richtungstatus & (1<<RICHTUNGSTART)) // Richtungswechsel im Gang
             {
-               richtungstatus &= ~(1<<RICHTUNGSTART); // Richtungswechsel beenden
-            taskarray[localnum][5] = HI; // Richtungbit reset
-            richtungcounter = 0;
+               richtungcounter++;
+               if (richtungcounter > 4)
+               {
+                  richtungstatus &= ~(1<<RICHTUNGSTART); // Richtungswechsel beenden
+               taskarray[localnum][5] = HI; // Richtungbit reset
+               richtungcounter = 0;
+               }
             }
-          }
 
-          */
+            */
          
 
   
                  
          
-#pragma mark local speed
          if (speed_raw < 2) // stillstand oder Richtungswachsel
          {
             
@@ -2544,6 +2555,7 @@ void loop()
             //uint8_t speed_full = localpotarray[localnum] ; //8-bit Wert, 
             speed = speed_raw;
             
+            
             // speed setzen
           
             
@@ -2557,6 +2569,7 @@ void loop()
                   speedarray[i] = HI; 
                   taskarray[localnum][5+i] = HI;
                   //taskarray[2][5+i] = HI;
+
                   
                }
                else
@@ -2600,7 +2613,7 @@ void loop()
         
          // Richtung
           
-         
+           
            if (lokalcodearray[localnum] & 0x02) // von debounce,  Richtungsimpuls, bit 1
            {
               
@@ -2622,11 +2635,14 @@ void loop()
               for (uint8_t i=1;i<4;i++) 
               {
                   //// Serial.println("speed_raw 0: HALT");
+                 //if(localnum < 2) // test: nur fuer 0,1
+                 {
+                  taskarray[localnum][5+i] = LO;
+                 }
                  
-                 taskarray[localnum][5+i] = LO;
               }
           
-              taskarray[localnum][5] = HI; // Richtungbit set
+              //taskarray[localnum][5] = HI; // Richtungbit set
               
               lokalstatus |= (1<<LOKALRICHTUNGBIT0);
          
