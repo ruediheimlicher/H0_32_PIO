@@ -1258,7 +1258,7 @@ void loop()
       }
       //sprintf(buf, "0%1d",ackData[0]);
       */
-      /*
+      
       lcd.setCursor(0,2);
       lcdputint3(ackData[0]);
       lcd.setCursor(4,2);
@@ -1268,7 +1268,7 @@ void loop()
       lcdputint3(ackData[2]);
       lcd.setCursor(12,2);
       lcdputint3(ackData[3]);
-      */
+      
      /*
       uint8_t index = 3;
       lcd.setCursor(0,2);
@@ -1379,13 +1379,15 @@ void loop()
       //lcd_putc(' ');
       //lcd_putint2(speed);
       lcd_putc(' ');
+      lcd.setCursor(16,0);
       if(taskarray[0][4] == LO)
       {
-         lcd_puts("OF");
+
+         lcd.print("OF");
       }
       else if(taskarray[0][4] == HI)
       {
-         lcd_puts("ON");
+         lcd.print("ON");
       }
       //lcd_putc(' ');
 
@@ -1408,14 +1410,14 @@ void loop()
       lcd_putint2(taskarray[1][5]);
       lcd_putc(' ');
       
-      
+      lcd.setCursor(16,1);
       if(taskarray[1][4] == LO)
       {
-         lcd_puts("OF");
+         lcd.print("OF");
       }
       else if(taskarray[1][4] == HI)
       {
-         lcd_puts("ON");
+         lcd.print("ON");
       }
       
 
@@ -1720,8 +1722,6 @@ void loop()
                   {
                      //// Serial.println("speed_raw 0: WENDEN");
                      taskarray[loknummer][5] = HI; // richtungswechsel fuer speed = 1
-                     
-                     
                   }
                }
                else 
@@ -1797,8 +1797,7 @@ void loop()
                // speed auf 0 setzen
                for (uint8_t i=1;i<4;i++) 
                {
-                  // // Serial.println("speed_raw 0: HALT");
-                  
+                  // Serial.println("speed_raw 0: HALT");
                   taskarray[loknummer][5+i] = LO;
                }
                
@@ -2470,37 +2469,7 @@ void loop()
          
          speed_raw = localpotarray[localnum] >> 4; // 0: halt 1: richtung 2-5: speed
          
-         /*
-         switch (localnum)
-         {
-            case 0:
-            {
-               speedraw0 = localpotarray[localnum] >> 4;
-            }break;
-            case 1:
-            {
-               speedraw1 = localpotarray[localnum] >> 4;
-            }break;
-            case 2:
-            {
-               //speedrawcounter++;
-               
-               speedraw2 = localpotarray[localnum] >> 4;
-               if (speedraw2 > 0)
-               {
-                  speedraw2 += 1; // speed 1 ist Richtungsumschaltung
-               }
-               if (speedraw2 > 15)
-               {
-                  speedraw2 = 15;
-               }
-            }break;
-            case 3:
-            {
-               speedraw3 = localpotarray[localnum] >> 4;
-            }break;
-         }
-         */
+
          
          if (speed_raw > 0)
          {
