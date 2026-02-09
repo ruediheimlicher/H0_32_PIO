@@ -1004,15 +1004,24 @@ void loop()
             radio.read(&ackData, sizeof(ackData));
             radio.flush_rx();
 
+            // speed
             localpotarray[2] =  ackData[0];
             localpotarray[3] =  ackData[2];
+
+            // code
+            //tastencodeC = 0xFF - ackData[1];
             tastencodeC = ackData[1];
 
             uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
+            
             tastenadresseC = (tastencodeC & 0xF0) >> 4;
             lokaladressearray[2] = 0xFF - tastencodeC_raw;
-            lokalcodearray[2] = tastencodeC & 0x0F; // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
+            
+            lokalcodearray[2] = (tastencodeC & 0x0F); // Bit 0-3: Richtung (Bit 1) und Lampe (Bit 0)
 
+            
+            
+            
             tastencodeD = ackData[3];
             uint8_t tastencodeD_raw = (tastencodeD & 0xF0) >> 4; // oberste 4 Bit diptasten
             lokaladressearray[3] = 0xFF - tastencodeD_raw;
@@ -2552,7 +2561,7 @@ void loop()
          } // speed_raw >= 2
          localspeedarray[localnum] = speed;
          
-         /
+         
          // rep speed
          /*
          taskarray[localnum][17] = taskarray[localnum][5];
