@@ -2537,7 +2537,6 @@ void loop()
                   //                 // Serial.print("1");
                   speedarray[i] = HI; 
                   taskarray[localnum][5+i] = HI;
-                  //taskarray[2][5+i] = HI;
 
                   
                }
@@ -2546,32 +2545,14 @@ void loop()
                   //              // Serial.print("0");
                   speedarray[i] = LO; 
                   taskarray[localnum][5+i] = LO;
-                  //taskarray[2][5+i] = LO;
                   
                }
             //           // Serial.print("\n");
             }
          } // speed_raw >= 2
-         
-
          localspeedarray[localnum] = speed;
          
-         /*   
-         for (int i=5; i<9; i++) 
-         {
-            if (taskarray[localnum][i] == 0xFEFE)
-            {
-               // Serial.print("1");
-            }
-            else 
-            {
-               // Serial.print("0");
-            }
-            //// Serial.print(taskarray[localnum][i]);
-            
-         }
-         // Serial.print("\n");
-         */
+         /
          // rep speed
          /*
          taskarray[localnum][17] = taskarray[localnum][5];
@@ -2611,7 +2592,7 @@ void loop()
                  
               }
           
-              //taskarray[localnum][5] = HI; // Richtungbit set
+              taskarray[localnum][5] = HI; // Richtungbit set
               
               lokalstatus |= (1<<LOKALRICHTUNGBIT0);
          
