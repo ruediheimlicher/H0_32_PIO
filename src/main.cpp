@@ -410,15 +410,15 @@ void pakettimerfunction()
       if ((sourcestatus & 0x01) && (paketpos == 1))// local
       {
          OSZI_A_LO();
-         //digitalWriteFast(LOKSYNC,LOW);
+         digitalWriteFast(LOKSYNC,LOW);
       }
       //
       else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
       {
-         digitalWriteFast(LOKSYNC,LOW);
+         //digitalWriteFast(LOKSYNC,LOW);
       }
    }
-   
+   OSZI_A_HI();
    if (aktualcommand & (1<<commandpos))
    {
       digitalWriteFast(OUT_PIN,HIGH);
@@ -434,9 +434,11 @@ void pakettimerfunction()
       
       digitalWriteFast(CONTROL_PIN,LOW);
    }
+   digitalWriteFast(LOKSYNC,HIGH);
    if (commandpos < 15)
    {
       commandpos++;
+      //digitalWriteFast(LOKSYNC,HIGH);
    }
    else 
    {
@@ -519,6 +521,28 @@ void ADC_init(void)
 //   delay(100);
    
    
+}
+
+
+
+uint8_t checkDoubleAddress(void)
+{
+   for(uint8_t i=0;i<ANZLOKALLOKS;i++)
+   {
+      for(uint8_t k=0;k<ANZLOKALLOKS;k++)
+      {
+         if(k != i)
+         {
+            if(lokaladressearray[i] == lokaladressearray[k])
+
+            {
+               return (lokaladressearray[k]);
+            }
+         }
+        
+      }
+   }
+   return 0;
 }
 
 
@@ -1219,7 +1243,20 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
-    
+      lcd.setCursor(0,1);
+      lcdputint3(lokaladressearray[0]);
+      lcd.setCursor(4,1);
+      lcdputint3(lokaladressearray[1]);
+       lcd.setCursor(8,1);
+      lcdputint3(lokaladressearray[2]);
+      lcd.setCursor(12,1);
+      lcdputint3(lokaladressearray[3]);
+      uint8_t doubleadress = checkDoubleAddress(); 
+      lcd.setCursor(16,3);
+      lcd.print("   ");
+      lcd.setCursor(16,3);
+      lcd.print(doubleadress);
+
       lcd.setCursor(0,0);
       lcdputint3(localpotarray[0]);
       lcd.setCursor(4,0);
