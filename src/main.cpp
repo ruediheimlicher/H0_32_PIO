@@ -92,7 +92,7 @@ void ResetData()
    data.C= 127;
 
 }
-
+/*
 void OSZIA_HI(void)
 {
    digitalWriteFast(OSZIA_PIN, HIGH);
@@ -105,6 +105,7 @@ void OSZIA_TOG()
 {
    digitalWriteFast(OSZIA_PIN, !(digitalRead(OSZIA_PIN)));
 }
+*/
 uint16_t lerp(uint16_t a, uint16_t b,float t)
 {
    return a * (1 - t) + b * t;
@@ -146,7 +147,7 @@ ADC *adc = new ADC(); // adc object
 #define POT_3_PIN    A3
 
 #define SOURCECONTROL    6 // Eingang, HI wenn local
-#define LOKSYNC         7
+#define LOKSYNC         8
 
 
 
@@ -400,17 +401,24 @@ void pakettimerfunction()
    
    if ((bytepos) == 0)
    {
-      
+      //OSZI_A_TOGG();
       if(paketpos == 0)
          {
-         //OSZI_B_LO();
-         }
-      
-      // syncsignal
-      if ((sourcestatus & 0x01) && (paketpos == 1))// local
-      {
          OSZI_A_LO();
-         digitalWriteFast(LOKSYNC,LOW);
+         //digitalWriteFast(LOKSYNC,LOW);
+         }
+      if(paketpos == 1)
+         {
+         //OSZI_A_HI();
+         //digitalWriteFast(LOKSYNC,LOW);
+         }
+      // syncsignal
+      //if ((sourcestatus & 0x01) && (paketpos == 1))// local
+      if ((sourcestatus & 0x01) && (loknummer == 0))// local
+
+      {
+         //OSZI_A_LO();
+         //digitalWriteFast(LOKSYNC,LOW);
       }
       //
       else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
@@ -418,7 +426,7 @@ void pakettimerfunction()
          //digitalWriteFast(LOKSYNC,LOW);
       }
    }
-   OSZI_A_HI();
+   //OSZI_A_HI();
    if (aktualcommand & (1<<commandpos))
    {
       digitalWriteFast(OUT_PIN,HIGH);
@@ -434,7 +442,7 @@ void pakettimerfunction()
       
       digitalWriteFast(CONTROL_PIN,LOW);
    }
-   digitalWriteFast(LOKSYNC,HIGH);
+   //digitalWriteFast(LOKSYNC,HIGH);
    if (commandpos < 15)
    {
       commandpos++;
@@ -443,6 +451,7 @@ void pakettimerfunction()
    else 
    {
       commandpos = 0;
+      OSZI_A_HI();
       //digitalWriteFast(LOKSYNC,HIGH);
       
       digitalWriteFast(OUT_PIN,LOW);
@@ -452,7 +461,7 @@ void pakettimerfunction()
       if (bytepos >= 20 + pause) // Paket fertig
       {
          bytepos = 0;
-         OSZI_A_HI();
+         //OSZI_A_HI();
          //OSZI_B_LO();
          if (paketpos < paketmax - 1)
          {
@@ -609,8 +618,8 @@ void setup()
    
    pinMode(OSZI_PULS_A, OUTPUT);
    digitalWriteFast(OSZI_PULS_A, HIGH); 
-   pinMode(OSZI_PULS_B, OUTPUT);
-   digitalWriteFast(OSZI_PULS_B, LOW); 
+   //pinMode(OSZI_PULS_B, OUTPUT);
+   //digitalWriteFast(OSZI_PULS_B, LOW); 
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
@@ -1180,7 +1189,7 @@ void loop()
             minanzeige = anzeige;
          }
          /*
-         lcd_gotoxy(0, 3);
+         lcd.setCursor(0, 3);
          lcd_puts("I: ");
          //lcd_putint(0xFF - emittermittel);
          //lcd_putc(' ');
@@ -1232,9 +1241,9 @@ void loop()
        //  lcd.print(pot0);
        */
        /*
-       lcd_gotoxy(12,1);
+       lcd.setCursor(12,1);
        lcd_puthex(tastencodeA & 0x02);
-       lcd_gotoxy(12,2);
+       lcd.setCursor(12,2);
        lcd_puthex(tastencodeB & 0x02);
        */
    } // if sinceemitter
@@ -1281,6 +1290,7 @@ void loop()
 
       sinceblink = 0;
       loopcounter++;
+     
       lcd.setCursor(19,0);
       lcd.print(char('A' + asciicounter));
       asciicounter++;
@@ -1347,12 +1357,12 @@ void loop()
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
       //lcd_putc('a');
       //lcd_puts("blink");
-      //lcd_gotoxy(8, 0);
+      //lcd.setCursor(8, 0);
       //lcd_putc('U');
       //lcd_puthex(usbtask);
       //lcd_putc('*');
       
-      //lcd_gotoxy(0, 3);
+      //lcd.setCursor(0, 3);
       //lcd_puthex(tastencodeA);
       //lcd_putc(' ');
       //lcd_puthex(tastenadresseA);
@@ -1361,15 +1371,18 @@ void loop()
       //lcd_putc(' ');
       //lcd_puthex(tastenadresseB);
 
-         
-      lcd_gotoxy(15, 0);
+      lcd.setCursor(19, 1);  
+      lcd_putc('*');
+      lcd.setCursor(15, 0);
 
       if(sourcestatus == 2)
       {
-         lcd_puts("USB  ");
+         lcd.setCursor(17,3);
+         lcd.print("USB");
          if(loknummer == 0)
          {
-            lcd_gotoxy(0, 3); 
+            /**
+            lcd.setCursor(0, 3); 
             lcd_putint1(loknummer);
             lcd_putc(' ');
             lcd_putint1(usbadressearray[0]);
@@ -1379,15 +1392,17 @@ void loop()
             
             lcd_putc(' ');
             lcd_putint(buffer[17]); // speed_raw. Bit 1: richtung bit2-4 speed
+            */
          }
 
          
       }
      else if (sourcestatus == 1)
       {
-         lcd_puts("local");
+         lcd.setCursor(17,3);
+         lcd.print("loc");
 
-         //lcd_gotoxy(0,3);
+         //lcd.setCursor(0,3);
          //lcd_puthex(tastencodeA);
          /*
          lcd_putc(' ');
@@ -1398,7 +1413,7 @@ void loop()
          */
       }
          /*
-         lcd_gotoxy(0,3);
+         lcd.setCursor(0,3);
          lcd_putint12(loknummerTRITarray[0]);
          lcd_putc(' ');
          lcd_putint12(loknummerTRITarray[1]);
@@ -1409,8 +1424,8 @@ void loop()
          */
 
       // Kanal A
-      
-      lcd_gotoxy(0,1);
+      /*
+      lcd.setCursor(0,1);
       lcd_puts("A ");
       lcd_puthex(diptastenadresseA);
       //lcd_putc(' ');
@@ -1418,7 +1433,7 @@ void loop()
       lcd_putc(' ');
       
       lcd_putint(localpotarray[0]);
-
+      */
       //lcd_putc(' ');
       //lcd_putint2(taskarray[0][5]);
 
@@ -1445,7 +1460,7 @@ void loop()
 
       //Kanal B:
       
-      lcd_gotoxy(0,2);
+      lcd.setCursor(0,2);
       lcd_puts("B ");
       lcd_puthex(diptastenadresseB);
       lcd_putc(' ');
@@ -1470,7 +1485,7 @@ void loop()
       //lcd_putc(loopcounter & 0x07);
       //lcd_putc(strompos);
       /*
-      lcd_gotoxy(0, 2);
+      lcd.setCursor(0, 2);
       lcd_putint(localpotarray[0]);
       lcd_putc(' ');
       lcd_puthex(taskarray[0]);
@@ -1624,8 +1639,25 @@ void loop()
          usbadressearray[2] = buffer[10];
          usbadressearray[3] = buffer[11];
 
+         speed_raw = buffer[17];
+
          switch (usbtask)
          {
+            case 0xBF:
+            {
+               lcd.setCursor(0,3);
+               lcd.print("w");
+               lcd.print(loknummer);
+                lcd.print("t");
+               lcd.print(usbtask);
+               lcd.print("s");
+               lcd.print(buffer[8]);
+               lcd.print(buffer[9]);
+               lcd.print(buffer[10]);
+               lcd.print(buffer[11]);
+               lcd.print("sp");
+               lcd.print(buffer[17]);
+            }
             case 0xA0: // address
             {
                /*
@@ -1941,7 +1973,7 @@ void loop()
                
                
             }break;
-/*
+            /*
             case 0xE1: // Timerintervall
             {
                // Serial.print("E1 timerintervall b19: ");
@@ -1950,7 +1982,7 @@ void loop()
                
                
             }break;
-               */              
+            */              
                
                
                
