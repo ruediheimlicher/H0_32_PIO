@@ -1648,15 +1648,61 @@ void loop()
                lcd.setCursor(0,3);
                lcd.print("w");
                lcd.print(loknummer);
-                lcd.print("t");
+               lcd.print("t");
+               /*
                lcd.print(usbtask);
                lcd.print("s");
+               */
                lcd.print(buffer[8]);
                lcd.print(buffer[9]);
                lcd.print(buffer[10]);
                lcd.print(buffer[11]);
                lcd.print("sp");
                lcd.print(buffer[17]);
+
+               loknummer = ANZLOKS - 1;
+               // rep
+               taskarray[loknummer][0] = tritarray[buffer[8]];
+               taskarray[loknummer][1] = tritarray[buffer[9]];
+               taskarray[loknummer][2] = tritarray[buffer[10]];
+               taskarray[loknummer][3] = tritarray[buffer[11]];
+               // repetition address
+               taskarray[loknummer][12] = taskarray[loknummer][0] ;
+               taskarray[loknummer][13] = taskarray[loknummer][1] ;
+               taskarray[loknummer][14] = taskarray[loknummer][2] ;
+               taskarray[loknummer][15] = taskarray[loknummer][3] ;
+               
+               speed_raw  = buffer[17]; 
+               speed = speed_raw;
+
+               for (uint8_t i=0;i<4;i++)
+                  {
+                     //// Serial.print(" i: "); // Serial.print(i);
+                     //// Serial.print(" data: ");// Serial.print(speed & (1<<i));
+                     //// Serial.print("\n");
+                     if (speed & (1<<i))
+                     {
+                        //// Serial.print("HI");
+                        speedarray[i] = HI; 
+                        //taskarray[0][8-i] = HI;
+                        taskarray[loknummer][5+i] = HI;
+                     }
+                     else
+                     {
+                        //// Serial.print("LO");
+                        speedarray[i] = LO; 
+                        //taskarray[0][8-i] = LO;
+                        taskarray[loknummer][5+i] = LO;
+                     }
+                     //// Serial.print("\n");
+                  }
+               // rep speed
+               taskarray[loknummer][17] = taskarray[loknummer][5];
+               taskarray[loknummer][18] = taskarray[loknummer][6];
+               taskarray[loknummer][19] = taskarray[loknummer][7];
+               taskarray[loknummer][20] = taskarray[loknummer][8];
+
+
             }
             case 0xA0: // address
             {
