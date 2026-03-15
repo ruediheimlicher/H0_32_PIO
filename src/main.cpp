@@ -880,7 +880,7 @@ void setup()
     taskarray[0][3] = tritarray[buffer[11]];
 
    
-   //  lcd.setCursor(0,3);;
+   
     
 /*
    delay(50);
@@ -1252,6 +1252,8 @@ void loop()
 #pragma mark blink 
    if (sinceblink > 500)
    {
+      if (sourcestatus & 0x01)
+      {
       lcd.setCursor(0,1);
       lcdputint3(lokaladressearray[0]);
       lcd.setCursor(4,1);
@@ -1274,7 +1276,11 @@ void loop()
       lcdputint3(localpotarray[2]);
       lcd.setCursor(12,0);
       lcdputint3(localpotarray[3]);
-
+      }
+      else if (sourcestatus & 0x02)
+      {
+       
+      }
       /*
       lcd.setCursor(0,1);
       lcdputint3(speedraw0);
@@ -1314,7 +1320,7 @@ void loop()
       }
       //sprintf(buf, "0%1d",ackData[0]);
       */
-      
+      /*
       lcd.setCursor(0,2);
       lcdputint3(ackData[0]);
       lcd.setCursor(4,2);
@@ -1324,7 +1330,7 @@ void loop()
       lcdputint3(ackData[2]);
       lcd.setCursor(12,2);
       lcdputint3(ackData[3]);
-      
+      */
      /*
       uint8_t index = 3;
       lcd.setCursor(0,2);
@@ -1632,7 +1638,7 @@ void loop()
      
      // // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
       #pragma mark TASK 
-      if (sourcestatus & 0x02)
+      if (sourcestatus & 0x02) // USB
       {
          usbadressearray[0] = buffer[8];
          usbadressearray[1] = buffer[9];
@@ -1657,8 +1663,10 @@ void loop()
                lcd.print(buffer[9]);
                lcd.print(buffer[10]);
                lcd.print(buffer[11]);
-               lcd.print("sp");
+               lcd.print("w");
                lcd.print(buffer[17]);
+                lcd.print("f");
+               lcd.print(buffer[16]);
 
                loknummer = ANZLOKS - 1;
                // rep
@@ -1672,8 +1680,15 @@ void loop()
                taskarray[loknummer][14] = taskarray[loknummer][2] ;
                taskarray[loknummer][15] = taskarray[loknummer][3] ;
                
+               lcd.setCursor(0,2);
+               lcd.print("t");
+               lcd.print(loknummer);
+               lcd.print("w");
+
                speed_raw  = buffer[17]; 
                speed = speed_raw;
+
+              
 
                for (uint8_t i=0;i<4;i++)
                   {
@@ -1686,6 +1701,7 @@ void loop()
                         speedarray[i] = HI; 
                         //taskarray[0][8-i] = HI;
                         taskarray[loknummer][5+i] = HI;
+                        lcd.print("1");
                      }
                      else
                      {
@@ -1693,7 +1709,10 @@ void loop()
                         speedarray[i] = LO; 
                         //taskarray[0][8-i] = LO;
                         taskarray[loknummer][5+i] = LO;
+                        lcd.print("0");
+                        
                      }
+                     
                      //// Serial.print("\n");
                   }
                // rep speed
@@ -1702,8 +1721,38 @@ void loop()
                taskarray[loknummer][19] = taskarray[loknummer][7];
                taskarray[loknummer][20] = taskarray[loknummer][8];
 
-
+               // Funktion
+                if (buffer[16] & 0x01)
+               {
+                  //// Serial.println("D0 Funktion HI");
+                  taskarray[loknummer][4] = HI;
+                  taskarray[loknummer][16] = HI;
+                  //  lcd.setCursor(12,1);
+                  //  lcd.print("ON ");
+                  
+                  
+               }
+               else
+               {
+                  //// Serial.println("D0 Funktion LO");
+                  taskarray[loknummer][4] = LO;
+                  taskarray[loknummer][16] = LO;
+                  //  lcd.setCursor(12,1);
+                  //  lcd.print("OFF");
+                  
+               }
+               
+               //lcd.print(buffer[17]);
+               /*
+               lcd.print(taskarray[loknummer][5]);
+               lcd.print(taskarray[loknummer][6]);
+               lcd.print(taskarray[loknummer][7]);
+               lcd.print(taskarray[loknummer][8]);
+               */
             }
+
+
+
             case 0xA0: // address
             {
                /*
@@ -1794,6 +1843,7 @@ void loop()
             }break;
                
             case 0xB0: // speed
+            
             {
                
                // Adresse mitgeben
@@ -1897,6 +1947,12 @@ void loop()
                taskarray[loknummer][18] = taskarray[loknummer][6];
                taskarray[loknummer][19] = taskarray[loknummer][7];
                taskarray[loknummer][20] = taskarray[loknummer][8];
+               
+               lcd.setCursor(0,2);
+               lcd.print("t");
+               lcd.print(loknummer);
+               lcd.print("w");
+               lcd.print(buffer[17]);
                
                
             }break;
@@ -2184,8 +2240,13 @@ void loop()
                taskarray[1][18] = taskarray[1][6];
                taskarray[1][19] = taskarray[1][7];
                taskarray[1][20] = taskarray[1][8];
-               
-               
+               /*
+               lcd.setCursor(8,2);
+               lcd.print("t");
+               lcd.print(loknummer);
+               lcd.print("w");
+               lcd.print(buffer[17]);
+               */
                
             }break;
                
