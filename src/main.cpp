@@ -209,6 +209,8 @@ uint8_t minanzeige = 0xFF;
 elapsedMillis sinms;
 elapsedMillis sinceblink;
 
+elapsedMillis sinceweiche;
+
 
 float sinpos = 0;
 #define pi 3.14
@@ -255,6 +257,7 @@ volatile uint8_t lokalcodearray[ANZLOKALLOKS] = {}; // Lok-Codes (Richtung, Funk
 
 volatile uint8_t usbadressearray[4] = {}; // Lok-Adressen
 volatile uint8_t usbcodearray[4] = {}; // Lok-Codes (Richtung, Funktion)
+
 
 
 
@@ -329,6 +332,11 @@ volatile uint8_t weichebyte6 = 0; // letztes Adressbit
 volatile uint8_t weichebyte7 = 0;
 volatile uint8_t weichenstatus = 0;
 volatile uint16_t weichencounter = 0;
+volatile uint8_t tastencounter = 0;
+
+volatile uint8_t weichencode = 0;
+volatile uint8_t weichenbuffer[4] = {};
+
 
 #define WEICHESTART       0
 #define WEICHERUN         1
@@ -338,8 +346,7 @@ volatile uint16_t weichencounter = 0;
 #define WEICHEOFF         5
 #define ABLENKUNG         6
 #define GERADE            7
-#define WEICHENIMPULSDAUER  1000
-
+#define WEICHENIMPULSDAUER  0xAF
 
 
 LiquidCrystal_I2C lcd(
@@ -445,7 +452,8 @@ void pakettimerfunction()
       if(paketpos == ANZLOKALLOKS - 1) // Weiche
       {
          //weichebyte6 = taskarray[paketpos][2];
-         weichebyte7 = taskarray[paketpos][3];
+         //weichebyte7 = taskarray[paketpos][3];
+         //sinceweiche = 0;
       }
    }
    //OSZI_A_HI();
@@ -488,11 +496,14 @@ void pakettimerfunction()
          if (paketpos < paketmax - 1)
          {
             paketpos++; // jede Lok ein Paket
-            if (paketpos == paketmax - 1) // Paket fertig
+            if (paketpos == paketmax - 1) // Paketserie fertig
             {
                //
-               //OSZI_B_HI();
+               //OSZI_B_LO();
                paketpos = 0;
+               //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+               //taskarray[ANZLOKS - 1][15] = HI;
+               //OSZI_B_HI();
             }
          }
          else 
@@ -1274,6 +1285,64 @@ void loop()
        */
    } // if sinceemitter
 
+   /*
+   if((sinceweiche > 2) && (weichenstatus & (1<<WEICHESTART)))
+   {
+       loknummer = ANZLOKS - 1; // letztes Paket, Weichen
+      //  address
+      taskarray[loknummer][0] = weichenbuffer[0];
+      taskarray[loknummer][1] = weichenbuffer[1];
+      taskarray[loknummer][2] = weichenbuffer[2];
+      taskarray[loknummer][3] = weichenbuffer[3];
+
+      taskarray[loknummer][12] = weichenbuffer[0];
+      taskarray[loknummer][13] = weichenbuffer[1];
+      taskarray[loknummer][14] = weichenbuffer[2];
+      taskarray[loknummer][15] = weichenbuffer[3];
+
+   }
+   */
+
+   if(weichenstatus & (1<<WEICHESTART))
+   {   
+         
+         if(weichencounter < 64)
+         {
+            weichencounter++;
+         }
+         if (weichencounter == 24)
+         {
+            taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+            taskarray[ANZLOKS - 1][15] = HI;
+            
+         }
+         else if (weichencounter >= 63)
+         {
+            //weichencounter = 64;
+            weichenstatus &= ~(1<<WEICHESTART);
+         }
+      
+   }
+
+   //if((sinceweiche > WEICHENIMPULSDAUER) && (weichenstatus & (1<<WEICHESTART)))
+   {
+     //sinceweiche = 0;
+     
+     // weichencounter = 77;
+      //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+      //taskarray[ANZLOKS - 1][15] = HI;
+
+
+      //if (weichenstatus & (1<<WEICHESTART))
+      {
+         //weichencounter = 78;
+
+         //weichenstatus &= ~(1<<WEICHESTART);
+         //weichenstatus &= (1<<WEICHEDELAY);
+         //taskarray[ANZLOKS - 1][3] = HI;
+
+      }
+   }
    
 #pragma mark blink 
    if (sinceblink > 500)
@@ -1308,9 +1377,12 @@ void loop()
        
       }
 
-      lcd.setCursor(10,2);
+      lcd.setCursor(4,2);
       lcdputint3(weichencounter);
-      //lcdputint3(weichebyte7);
+      lcd.print(' ');
+      lcdputint3(tastencounter);
+      lcd.print(' ');
+      lcdputint3(weichenstatus);
 
       /*
       lcd.setCursor(0,1);
@@ -1418,7 +1490,7 @@ void loop()
          lcd.print("USB");
          if(loknummer == 0)
          {
-            /**
+            /*
             lcd.setCursor(0, 3); 
             lcd_putint1(loknummer);
             lcd_putc(' ');
@@ -1477,16 +1549,7 @@ void loop()
       //lcd_putc(' ');
       //lcd_putint2(speed);
       lcd_putc(' ');
-      lcd.setCursor(16,0);
-      if(taskarray[0][4] == LO)
-      {
-
-         lcd.print("OF");
-      }
-      else if(taskarray[0][4] == HI)
-      {
-         lcd.print("ON");
-      }
+   
       //lcd_putc(' ');
 
       
@@ -1682,6 +1745,7 @@ void loop()
          {
             case 0xBF:
             {
+               /*
                lcd.setCursor(0,3);
                //lcd.print("w");
                lcd.print(loknummer);
@@ -1697,52 +1761,40 @@ void loop()
                lcd.print(buffer[17]);
                 lcd.print("f");
                lcd.print(buffer[16]);
-
+               */
                loknummer = ANZLOKS - 1; // letztes Paket, Weichen
                //  address
+               
                taskarray[loknummer][0] = tritarray[buffer[8]];
                taskarray[loknummer][1] = tritarray[buffer[9]];
                taskarray[loknummer][2] = tritarray[buffer[10]];
-               
-               if(buffer[11] == 1)
-               {
-                  if(!weichenstatus & (1<<WEICHESTART))
-                  {
-                     taskarray[loknummer][3] = tritarray[1]; // OPEN
-                     weichenstatus |= (1<<WEICHESTART);
-                     weichencounter = 0;
-                  }
-                  else if (weichenstatus & (1<<WEICHESTART))
-                  {
-                     weichencounter++;
-                     if(weichencounter < 100)
-                     {
-                        taskarray[loknummer][3] = tritarray[1]; // OPEN
-                     }
-                     else
-                     {
-                        taskarray[loknummer][3] = tritarray[2]; //HI
+               taskarray[loknummer][3] = tritarray[buffer[11]]; // OPEN
 
-                     }
-                     if(weichencounter >= 500)
-                     {
-                        weichenstatus &= ~(1<<WEICHESTART);
-                        weichencounter = 0;
-                     }
-                  }
-                  
-               }
                // repetition address
+               
                taskarray[loknummer][12] = taskarray[loknummer][0] ;
                taskarray[loknummer][13] = taskarray[loknummer][1] ;
                taskarray[loknummer][14] = taskarray[loknummer][2] ;
                taskarray[loknummer][15] = taskarray[loknummer][3] ; 
-               
-               lcd.setCursor(0,2);
-               lcd.print("t");
-               lcd.print(loknummer); // paket
-               lcd.print("w");
 
+               
+               // weichenbuffer speichern
+               weichenbuffer[0] = tritarray[buffer[8]];
+               weichenbuffer[1] = tritarray[buffer[9]];
+               weichenbuffer[2] = tritarray[buffer[10]];
+               weichenbuffer[3] = tritarray[buffer[11]]; // OPEN
+
+               weichencode = buffer[17];
+               tastencounter++;
+
+               
+               if(!weichenstatus & (1<<WEICHESTART))
+               {
+                  weichenstatus |= (1<<WEICHESTART);
+                  weichencounter = 0;
+                  
+               }
+               
                speed_raw  = buffer[17]; // Weiche
                speed = speed_raw;
 
@@ -1755,7 +1807,7 @@ void loop()
                         speedarray[i] = HI; 
                         //taskarray[0][8-i] = HI;
                         taskarray[loknummer][5+i] = HI;
-                        lcd.print("1");
+                        //lcd.print("1");
                         speed_send |= (1<<i);
                      }
                      else
@@ -1763,17 +1815,19 @@ void loop()
                         speedarray[i] = LO; 
                         //taskarray[0][8-i] = LO;
                         taskarray[loknummer][5+i] = LO;
-                        lcd.print("0");
+                        //lcd.print("0");
                         speed_send &= ~(1<<i);
                         
                      }
                      
                      //// Serial.print("\n");
                   }
+                  /*
                   lcd.setCursor(8,2);
                   lcd.print("  ");
                   lcd.setCursor(8,2);
                   lcd.print(speed_send);
+                  */
                // rep speed
                
 
