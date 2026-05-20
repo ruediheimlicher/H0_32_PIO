@@ -43,7 +43,7 @@
 
 //hd44780_I2Cexp lcd;
 
-#include "lcd.h"
+//#include "lcd.h"
 #include "analog.h"
 
 #include <EEPROM.h>
@@ -82,6 +82,8 @@ uint8_t ackData[4] = {31, 32, 33, 34};
 elapsedMillis zeitintervall;
 uint8_t sekundencounter = 0;
 elapsedMillis sinceLastBlink = 0;
+
+uint8_t weichentastencounter = 0;
 
 Signal data;
 void ResetData()
@@ -131,7 +133,7 @@ ADC *adc = new ADC(); // adc object
 
 #define LOOPLED      0 // 
 
-#define TAKT_PIN     4
+  
 #define OUT_PIN      2
 #define OUT_PIN_INV  1
 
@@ -222,6 +224,10 @@ float sinpos = 0;
 #define SPI_MOSI  11
 #define SPI_MCP_CS    10
 
+#define SPI_SR_CS     22
+
+
+
 
 
 
@@ -229,6 +235,9 @@ float sinpos = 0;
 
 // cs 10
 gpio_MCP23S17 mcp0(SPI_MCP_CS,0x20);//instance 0 (address A0,A1,A2 tied to 0)
+
+gpio_MCP23S17 mcp1(SPI_SR_CS,0x20);//instance 0 (address A0=1, A1 = A2 = 0) 
+
 uint8_t regA = 0x0;
 uint8_t regB = 0;
 
@@ -236,6 +245,21 @@ volatile uint8_t tastencodeA = 0;
 volatile uint8_t tastencodeB = 0;
 volatile uint8_t tastencodeC = 0;
 volatile uint8_t tastencodeD = 0;
+
+volatile uint8_t weichentastencodeC = 0;
+volatile uint8_t weichentastencodeD = 0;
+volatile uint8_t oldweichentastencodeC = 0;
+volatile uint8_t oldweichentastencodeD = 0;
+
+
+uint8_t weichentastenstatusC = 0;
+uint8_t weichentastenstatusD = 0;
+
+uint8_t oldweichentastenstatusC = 0;
+uint8_t oldweichentastenstatusD = 0;
+
+uint8_t weichenxor = 0;
+
 
 uint8_t tastenstatusA = 0;
 //pi.__BEGIN_DECLS
@@ -521,6 +545,7 @@ void pakettimerfunction()
    
 }
 
+/*
 void LCD_init(void)
 {
    pinMode(LCD_RSDS_PIN, OUTPUT);
@@ -531,7 +556,7 @@ void LCD_init(void)
    digitalWrite(LCD_CLOCK_PIN,1);
 
 }
-
+*/
 void lcdputint3(uint16_t zahl)     // int bis 1000
 {
    char string[4];
@@ -626,6 +651,8 @@ void setup()
    
    //stromTimer.begin(stromtimerfunction, 5000);
 
+   pinMode(SPI_SR_CS, OUTPUT);
+   digitalWrite(SPI_SR_CS, HIGH);
 
    pinMode(5, OUTPUT);
    digitalWrite(5,1);
@@ -662,7 +689,7 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   LCD_init();
+   //LCD_init();
    
    //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
    radio.begin();
@@ -710,10 +737,18 @@ void setup()
 
    mcp0.gpioPinMode(0xFFFF); // alle input
    
-   //mcp0.portPullup(0x00FF); 
-   mcp0.portPullup(0xFFFF);// alle HI
+   mcp0.portPullup(0x00FF); 
+   //
    
    mcp0.gpioPort(0xCC33);
+
+
+   /* *********************************** */
+   // mcp1
+   /* *********************************** */
+   mcp1.begin();
+   mcp1.gpioPinMode(0xFF60);// A7 output, A6,A5 input
+   mcp1.gpioPort(0xFFFF); // alle HI
 
    
    EEPROM.begin();
@@ -850,31 +885,7 @@ void setup()
    taskarray[2][19] = taskarray[2][7];
    taskarray[2][20] = taskarray[2][8];
 
-   /*
-   commandarray0[0] = adressearray[0];
-   commandarray0[1] = adressearray[1];
-   commandarray0[2] = adressearray[2];
-   commandarray0[3] = adressearray[3];
-   commandarray0[4] = HI; // Lampe
-   commandarray0[5] = speedarray[0];
-   commandarray0[6] = speedarray[1];
-   commandarray0[7] = speedarray[2];
-   commandarray0[8] = speedarray[3];
    
-   commandarray0[9] = 0;
-   commandarray0[10] = 0;
-   commandarray0[11] = 0;
-   
-   commandarray0[12] = commandarray0[0];
-   commandarray0[13] = commandarray0[1];
-   commandarray0[14] = commandarray0[2];
-   commandarray0[15] = commandarray0[3];
-   commandarray0[16] = commandarray0[4];
-   commandarray0[17] = commandarray0[5];
-   commandarray0[18] = commandarray0[6];
-   commandarray0[19] = commandarray0[7];
-   commandarray0[20] = commandarray0[8];
-   */
    aktualcommand = OPEN;
    
    pinMode(POT_0_PIN, INPUT);
@@ -882,9 +893,8 @@ void setup()
    pinMode(POT_2_PIN, INPUT);
    pinMode(CURR_PIN, INPUT);
    
-   lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
+   //lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
    _delay_ms(100);
-   lcd_puts("Teensy");
 
    
    ADC_init();
@@ -1064,6 +1074,7 @@ void loop()
 
    if (sincemcp > 10)
    {
+      //digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
       if (radio.write(&data, sizeof(data)))
       {
          radiocounter++;
@@ -1175,8 +1186,36 @@ void loop()
 
       
       tastenstatusA |= tastencodeB;
+
+      weichentastencodeC = mcp1.gpioReadPortA();
+
+      //digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
       
-      
+
+      //mcp1.gpioDigitalWrite(7,((weichentastencounter++) & 0x01)); // 
+    
+      weichentastencodeD = mcp1.gpioReadPortB(); //& 0x7F;
+      weichenxor = weichentastencodeD ^ oldweichentastencodeD;
+      if(weichenxor) // neue Daten
+      {
+
+
+         if((weichentastencodeD & (1<<6))==0) // Taste 6 gedrueckt
+         {
+            mcp1.gpioDigitalWrite(7,0); //
+         }
+        
+         if((weichentastencodeD & (1<<5))==0) // Taste 5 gedrueckt
+         {
+            mcp1.gpioDigitalWrite(7,1); //
+         }
+
+         oldweichentastencodeD = weichentastencodeD;
+      } // if(weichentastencodeD ^ 
+
+
+
+
       // Pot auslesen
       
       for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
@@ -1184,6 +1223,8 @@ void loop()
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
       }
+
+      
       
       
    } // if (sincemcp )
@@ -1225,14 +1266,7 @@ void loop()
          {
             minanzeige = anzeige;
          }
-         /*
-         lcd.setCursor(0, 3);
-         lcd_puts("I: ");
-         //lcd_putint(0xFF - emittermittel);
-         //lcd_putc(' ');
-         lcd_putint(emittermittel);
-         lcd_putc(' ');
-         */
+        
       }
       else 
       {
@@ -1277,12 +1311,7 @@ void loop()
        //  lcd.setCursor(12,0);
        //  lcd.print(pot0);
        */
-       /*
-       lcd.setCursor(12,1);
-       lcd_puthex(tastencodeA & 0x02);
-       lcd.setCursor(12,2);
-       lcd_puthex(tastencodeB & 0x02);
-       */
+       
    } // if sinceemitter
 
    /*
@@ -1324,27 +1353,7 @@ void loop()
       
    }
 
-   //if((sinceweiche > WEICHENIMPULSDAUER) && (weichenstatus & (1<<WEICHESTART)))
-   {
-     //sinceweiche = 0;
-     
-     // weichencounter = 77;
-      //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-      //taskarray[ANZLOKS - 1][15] = HI;
-
-
-      //if (weichenstatus & (1<<WEICHESTART))
-      {
-         //weichencounter = 78;
-
-         //weichenstatus &= ~(1<<WEICHESTART);
-         //weichenstatus &= (1<<WEICHEDELAY);
-         //taskarray[ANZLOKS - 1][3] = HI;
-
-      }
-   }
    
-#pragma mark blink 
    if (sinceblink > 500)
    {
       if (sourcestatus & 0x01)
@@ -1358,11 +1367,29 @@ void loop()
       lcd.setCursor(12,1);
       lcdputint3(lokaladressearray[3]);
       uint8_t doubleadress = checkDoubleAddress(); 
+      lcd.setCursor(0,3);
+      lcd.print(tastencodeA, HEX);
+      lcd.setCursor(3,3);
+      lcd.print(tastencodeB, HEX);
+
+      lcd.setCursor(6,3);
+      lcd.print(weichentastencodeC, HEX);
+      lcd.setCursor(9,3);
+      lcd.print(weichentastencodeD, HEX);
+      lcd.setCursor(12,3);
+      lcd.print((weichenxor), HEX);
+      lcd.setCursor(15,3);
+      //lcd.print(weichentastenstatusD, HEX);
+      //oldweichentastencodeD = weichentastencodeD;
+      //mcp1.gpioDigitalWrite(7,0); //
+
+
+      /*    
       lcd.setCursor(16,3);
       lcd.print("   ");
-      lcd.setCursor(16,3);
+      lcd.setCursor(14,3);
       lcd.print(doubleadress);
-
+      */
       lcd.setCursor(0,0);
       lcdputint3(localpotarray[0]);
       lcd.setCursor(4,0);
@@ -1464,24 +1491,8 @@ void loop()
       //_delay_ms(10);
       //pinMode(LOOPLED, OUTPUT);
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
-      //lcd_putc('a');
-      //lcd_puts("blink");
-      //lcd.setCursor(8, 0);
-      //lcd_putc('U');
-      //lcd_puthex(usbtask);
-      //lcd_putc('*');
-      
-      //lcd.setCursor(0, 3);
-      //lcd_puthex(tastencodeA);
-      //lcd_putc(' ');
-      //lcd_puthex(tastenadresseA);
-      //lcd_putc(' ');
-      //lcd_puthex(tastencodeB);
-      //lcd_putc(' ');
-      //lcd_puthex(tastenadresseB);
-
+    
       lcd.setCursor(19, 1);  
-      lcd_putc('*');
       lcd.setCursor(15, 0);
 
       if(sourcestatus == 2)
@@ -1490,18 +1501,7 @@ void loop()
          lcd.print("USB");
          if(loknummer == 0)
          {
-            /*
-            lcd.setCursor(0, 3); 
-            lcd_putint1(loknummer);
-            lcd_putc(' ');
-            lcd_putint1(usbadressearray[0]);
-            lcd_putint1(usbadressearray[1]);
-            lcd_putint1(usbadressearray[2]);
-            lcd_putint1(usbadressearray[3]);
-            
-            lcd_putc(' ');
-            lcd_putint(buffer[17]); // speed_raw. Bit 1: richtung bit2-4 speed
-            */
+           
          }
 
          
@@ -1512,64 +1512,17 @@ void loop()
          lcd.print("loc");
 
          //lcd.setCursor(0,3);
-         //lcd_puthex(tastencodeA);
-         /*
-         lcd_putc(' ');
-         lcd_putint1(loknummerTRITarray[0]);
-         lcd_putint1(loknummerTRITarray[1]);
-         lcd_putint1(loknummerTRITarray[2]);
-         lcd_putint1(loknummerTRITarray[3]);
-         */
+       
       }
-         /*
-         lcd.setCursor(0,3);
-         lcd_putint12(loknummerTRITarray[0]);
-         lcd_putc(' ');
-         lcd_putint12(loknummerTRITarray[1]);
-         lcd_putc(' ');
-         lcd_putint12(loknummerTRITarray[2]);
-         lcd_putc(' ');
-         lcd_putint12(loknummerTRITarray[3]);
-         */
+       
 
       // Kanal A
-      /*
-      lcd.setCursor(0,1);
-      lcd_puts("A ");
-      lcd_puthex(diptastenadresseA);
-      //lcd_putc(' ');
-      //lcd_hextobin(diptastenadresseA);
-      lcd_putc(' ');
+     
       
-      lcd_putint(localpotarray[0]);
-      */
-      //lcd_putc(' ');
-      //lcd_putint2(taskarray[0][5]);
-
-      //lcd_putc(' ');
-      //lcd_putint2(speed);
-      lcd_putc(' ');
-   
-      //lcd_putc(' ');
-
-      
-      //lcd_puthex(loopstatus);
-      //lcd_putc(' ');
-     // lcd_putint(speed);
-      //uint8_t strompos = (emittermittel)/10;
 
       //Kanal B:
       
-      lcd.setCursor(0,2);
-      lcd_puts("B ");
-      lcd_puthex(diptastenadresseB);
-      lcd_putc(' ');
-      //lcd_hextobin(diptastenadresseB);
-      //lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_putint2(taskarray[1][5]);
-      lcd_putc(' ');
+      
       
       lcd.setCursor(16,1);
       if(taskarray[1][4] == LO)
@@ -1581,93 +1534,12 @@ void loop()
          lcd.print("ON");
       }
       
-
-      //lcd_putc(loopcounter & 0x07);
-      //lcd_putc(strompos);
-      /*
-      lcd.setCursor(0, 2);
-      lcd_putint(localpotarray[0]);
-      lcd_putc(' ');
-      lcd_puthex(taskarray[0]);
-      lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_puthex(taskarray[1]);
-      */
-
-     // // Serial.print("speed: ");
-    // // Serial.print(speed);
-    //  // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
-      /*
-       // Serial.print("speed: ");
-       // Serial.print(speed);
-       // Serial.print("\n");
-       // Serial.print(" a: ");
-       // Serial.print(speed & (1<<0));
-       // Serial.print(" b: ");
-       // Serial.print(speed & (1<<1));
-       // Serial.print(" c: ");
-       // Serial.print(speed & (1<<2));
-       // Serial.print(" d: ");
-       // Serial.print(speed & (1<<3));
-       // Serial.print("\n");
-       */
        if (speed > 15)
        {
          speed = 0;
        }
        
-      /*
-       for (uint8_t i=0;i<4;i++)
-       {
-       //   // Serial.print(" i: ");
-       //   // Serial.print(i);
-       //   // Serial.print(" data: ");
-       //   // Serial.print(speed & (1<<i));
-       
-       if ((speed & (1<<i)) > 0)
-       {
-       //            // Serial.print(" HI");
-       commandarray0[i+5] = HI; 
-       commandarray0[i+17] = HI; 
-       }
-       else
-       {
-       //            // Serial.print(" LO");
-       commandarray0[i+5] = LO; 
-       commandarray0[i+17] = LO; 
-       }
-       //         // Serial.print("\n");
-       }
-       */
-      /*
-       // Serial.print("speed: ");
-       // Serial.print(" ");
-       // Serial.print(commandarray0[5]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[6]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[7]);
-       // Serial.print(" ");
-       // Serial.print(commandarray0[8]);
-       // Serial.print("\n");
-       */
-      //      speed++;
-      
-      /*
-       uint8_t erfolg = ringbufferIn(erstepos);
-       
-       uint16_t anz = ringbufferCount();
-       // Serial.print("erfolg: ");
-       // Serial.print(erfolg);
-       // Serial.print(" anzahl: ");
-       // Serial.print(anz);
-       // Serial.print(" read: ");
-       // Serial.print(ringbuffer.read);
-       // Serial.print(" write: ");
-       // Serial.println(ringbuffer.write);
-       */
-      //// Serial.print("\n");
+  
    } // if sincblinkk 500
 
 
@@ -1685,15 +1557,8 @@ void loop()
       //     for (int i=0; i<8; i++) 
       {
          //       int b = buffer[0] & (1 << i);
-         //       // Serial.print((int)buffer[i]);
-         //       // Serial.print("\t");
-         //       digitalWrite(i, b);
+          //       digitalWrite(i, b);
       }
-      //     // Serial.println();
-      //     // Serial.print(hb);
-      //     // Serial.print("\t");
-      //     // Serial.print(lb);
-      //     // Serial.println();
       
       // ************************************
       usbtask = buffer[0]; // Auswahl lok
@@ -1707,17 +1572,10 @@ void loop()
       // Serial.print("******************  usbtask *** ");
       printHex8(usbtask);
       // Serial.printf("USB sourcestatus: %d loknummer: %d\n",sourcestatus,loknummer);
-      for (int i=0; i<24; i++) 
-      {
-         // Serial.print(buffer[i]);
-         // Serial.print(" ");
-      }
-      // Serial.print("\n");
-      */
+       */
       if (timerintervall != buffer[18])
       {
-        // // Serial.print("timerintervall changed\n");
-         
+           
          paketTimer.update(buffer[18]); 
          timerintervall = buffer[18];
       //   // Serial.print(timerintervall);
@@ -1745,23 +1603,6 @@ void loop()
          {
             case 0xBF:
             {
-               /*
-               lcd.setCursor(0,3);
-               //lcd.print("w");
-               lcd.print(loknummer);
-               lcd.print("t");
-
-               lcd.print(buffer[8]);  // last bit
-               lcd.print(buffer[9]);
-               lcd.print(buffer[10]);
-               lcd.print(buffer[11]); // first bit
-
-               lcd.setCursor(10,3);
-               lcd.print("w");
-               lcd.print(buffer[17]);
-                lcd.print("f");
-               lcd.print(buffer[16]);
-               */
                loknummer = ANZLOKS - 1; // letztes Paket, Weichen
                //  address
                
@@ -1777,7 +1618,6 @@ void loop()
                taskarray[loknummer][14] = taskarray[loknummer][2] ;
                taskarray[loknummer][15] = taskarray[loknummer][3] ; 
 
-               
                // weichenbuffer speichern
                weichenbuffer[0] = tritarray[buffer[8]];
                weichenbuffer[1] = tritarray[buffer[9]];
@@ -1787,8 +1627,8 @@ void loop()
                weichencode = buffer[17];
                tastencounter++;
 
-               
-               if(!weichenstatus & (1<<WEICHESTART))
+
+               if(!(weichenstatus & (1<<WEICHESTART)))
                {
                   weichenstatus |= (1<<WEICHESTART);
                   weichencounter = 0;
@@ -1801,33 +1641,27 @@ void loop()
               uint8_t  speed_send = 0;
 
                for (uint8_t i=3;i!=255;i--)
+               {
+                  if (speed & (1<<i))
                   {
-                     if (speed & (1<<i))
-                     {
-                        speedarray[i] = HI; 
-                        //taskarray[0][8-i] = HI;
-                        taskarray[loknummer][5+i] = HI;
-                        //lcd.print("1");
-                        speed_send |= (1<<i);
-                     }
-                     else
-                     {
-                        speedarray[i] = LO; 
-                        //taskarray[0][8-i] = LO;
-                        taskarray[loknummer][5+i] = LO;
-                        //lcd.print("0");
-                        speed_send &= ~(1<<i);
-                        
-                     }
-                     
-                     //// Serial.print("\n");
+                     speedarray[i] = HI; 
+                     //taskarray[0][8-i] = HI;
+                     taskarray[loknummer][5+i] = HI;
+                     //lcd.print("1");
+                     speed_send |= (1<<i);
                   }
-                  /*
-                  lcd.setCursor(8,2);
-                  lcd.print("  ");
-                  lcd.setCursor(8,2);
-                  lcd.print(speed_send);
-                  */
+                  else
+                  {
+                     speedarray[i] = LO; 
+                     //taskarray[0][8-i] = LO;
+                     taskarray[loknummer][5+i] = LO;
+                     //lcd.print("0");
+                     speed_send &= ~(1<<i);
+                     
+                  }
+                  
+               }
+
                // rep speed
                
 
@@ -1839,7 +1673,6 @@ void loop()
                // Funktion
                 if (buffer[16] & 0x01)
                {
-                  //// Serial.println("D0 Funktion HI");
                   taskarray[loknummer][4] = HI;
                   taskarray[loknummer][16] = HI;
                     lcd.setCursor(16,2);
@@ -1849,7 +1682,6 @@ void loop()
                }
                else
                {
-                  //// Serial.println("D0 Funktion LO");
                   taskarray[loknummer][4] = LO;
                   taskarray[loknummer][16] = LO;
                     lcd.setCursor(16,2);
@@ -1857,17 +1689,7 @@ void loop()
                   
                }
                
-               
-               //lcd.print(buffer[17]);
-               /*
-               lcd.print(taskarray[loknummer][5]);
-               lcd.print(taskarray[loknummer][6]);
-               lcd.print(taskarray[loknummer][7]);
-               lcd.print(taskarray[loknummer][8]);
-               */
             }
-
-
 
             case 0xA0: // address
             {
@@ -2217,23 +2039,7 @@ void loop()
                eepromadressearray[1][3] = tritarray[buffer[11]];
                
                //// Serial.println("\nLok 1: ");
-               
-               //// Serial.println(buffer[8]);
-               //// Serial.println(buffer[9]);
-               //// Serial.println(buffer[10]);
-               //// Serial.println(buffer[11]);
-               
-               /*
-               uint8_t eeprompos = 0x08;
-               EEPROM.update(eeprompos++,buffer[8]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[9]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[10]);
-               delay(10);
-               EEPROM.update(eeprompos++,buffer[11]);
-               delay(10);
-               */
+
                
                // repetition adresse
                taskarray[1][12] = taskarray[1][0];

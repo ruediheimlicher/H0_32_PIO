@@ -18,7 +18,7 @@
 //#define OSZIB_PIN 8
 
 //#define BOARD BOARD_6
-#define OZIA_PIN  22
+//#define OZIA_PIN  22
 #define ANZEIGE_POT     1
 #define ANZEIGE_TAST    0
 #define ANZEIGE_CALIB   2
