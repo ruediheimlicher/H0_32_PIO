@@ -234,9 +234,15 @@ float sinpos = 0;
 #define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
 
 // cs 10
+// DIP-tasten, function
 gpio_MCP23S17 mcp0(SPI_MCP_CS,0x20);//instance 0 (address A0,A1,A2 tied to 0)
 
-gpio_MCP23S17 mcp1(SPI_SR_CS,0x20);//instance 0 (address A0=1, A1 = A2 = 0) 
+// Weichen A
+gpio_MCP23S17 mcp1(SPI_SR_CS,0x21);//instance 0 (address A0=1, A1 = A2 = 0) 
+
+// Weichen B
+gpio_MCP23S17 mcp2(SPI_SR_CS,0x27);//instance 0 (address A0=1, A1 = A2 = 0) 
+
 
 uint8_t regA = 0x0;
 uint8_t regB = 0;
@@ -725,7 +731,7 @@ void setup()
    ResetData();
 
    
-   mcp0.begin();
+   mcp0.begin(0);
    /*
     • PortA registeraddresses range from 00h–0Ah
     • PortB registeraddresses range from 10h–1Ah
@@ -746,9 +752,16 @@ void setup()
    /* *********************************** */
    // mcp1
    /* *********************************** */
-   mcp1.begin();
+   mcp1.begin(0);
    mcp1.gpioPinMode(0xFF60);// A7 output, A6,A5 input
    mcp1.gpioPort(0xFFFF); // alle HI
+
+  /* *********************************** */
+   // mcp2
+   /* *********************************** */
+   mcp2.begin(0);
+   mcp2.gpioPinMode(0xFF60);// A7 output, A6,A5 input
+   mcp2.gpioPort(0xFFFF); // alle HI
 
    
    EEPROM.begin();
