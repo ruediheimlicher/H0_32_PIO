@@ -173,7 +173,8 @@ void gpio_MCP23S17::gpioPinMode(uint16_t mode)
 
 void gpio_MCP23S17::gpioPinMode(uint8_t pin, bool mode)
 {
-	if (pin < 16){//0...15
+	if (pin < 16)
+	{//0...15
 		mode == INPUT ? _gpioDirection |= (1 << pin) :_gpioDirection &= ~(1 << pin);
 		_GPIOwriteWord(MCP23S17_IODIR,_gpioDirection);
 	}

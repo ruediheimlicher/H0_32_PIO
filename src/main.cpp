@@ -238,10 +238,10 @@ float sinpos = 0;
 gpio_MCP23S17 mcp0(SPI_MCP_CS,0x20);//instance 0 (address A0,A1,A2 tied to 0)
 
 // Weichen A
-gpio_MCP23S17 mcp1(SPI_SR_CS,0x22);//instance 0 (address A0=1, A1 = A2 = 0) 
+gpio_MCP23S17 mcp1(SPI_SR_CS,0x21);//instance 0 (address A0=1, A1 = A2 = 0) 
 
 // Weichen B
-gpio_MCP23S17 mcp2(SPI_SR_CS,0x21);//instance 0 (address A0=1, A1 = A2 = 0) 
+gpio_MCP23S17 mcp2(SPI_SR_CS,0x22);//instance 0 (address A0=1, A1 = A2 = 0) 
 
 
 uint8_t regA = 0x0;
@@ -271,6 +271,7 @@ uint8_t weichentastenstatusD = 0;
 uint8_t oldweichentastenstatusC = 0;
 uint8_t oldweichentastenstatusD = 0;
 
+uint8_t weichenxor0 = 0;
 uint8_t weichenxor1 = 0;
 uint8_t weichenxor2 = 0;
 uint8_t weichenxor3 = 0;
@@ -763,14 +764,14 @@ void setup()
    // mcp1
    /* *********************************** */
    mcp1.begin(0);
-   mcp1.gpioPinMode(0xFF60);// A7 output, A6,A5 input
+   mcp1.gpioPinMode(0x6060);// A7 output, A6,A5 input
    mcp1.gpioPort(0xFFFF); // alle HI
 
   /* *********************************** */
    // mcp2
    /* *********************************** */
-   mcp2.begin();
-   mcp2.gpioPinMode(0xFF60);// A7 output, A6,A5 input
+   mcp2.begin(0);
+   mcp2.gpioPinMode(0x0060);// A7 output, A6,A5 input
    mcp2.gpioPort(0xFFFF); // alle HI
 
    
@@ -1211,6 +1212,24 @@ void loop()
       tastenstatusA |= tastencodeB;
 
       weichentastencodeC = mcp1.gpioReadPortA();
+      weichenxor0 = weichentastencodeC ^ oldweichentastencodeC;
+      //if(weichenxor0) // neue Daten
+      {
+         
+         if((weichentastencodeC & (1<<6))==0) // Taste 6 gedrueckt
+         {
+            mcp1.gpioDigitalWrite(15,0); // GPA7
+         }
+        
+         if((weichentastencodeC & (1<<5))==0) // Taste 5 gedrueckt
+         {
+            mcp1.gpioDigitalWrite(15,1); //
+         }
+         
+         oldweichentastencodeC = weichentastencodeC;
+      } // if(weichentastencodeD ^ 
+
+
 
       //digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
       
@@ -1222,15 +1241,14 @@ void loop()
       if(weichenxor1) // neue Daten
       {
 
-
          if((weichentastencodeD & (1<<6))==0) // Taste 6 gedrueckt
          {
-            mcp1.gpioDigitalWrite(GPA7,0); //
+            mcp1.gpioDigitalWrite(7,0); // GPB7
          }
         
          if((weichentastencodeD & (1<<5))==0) // Taste 5 gedrueckt
          {
-            mcp1.gpioDigitalWrite(GPA7,1); //
+            mcp1.gpioDigitalWrite(7,1); //
          }
 
          oldweichentastencodeD = weichentastencodeD;
@@ -1243,20 +1261,20 @@ void loop()
       weichentastencodeE = mcp2.gpioReadPortA(); //& 0x7F;
 
       weichenxor2 = weichentastencodeE ^ oldweichentastencodeE;
-      if(weichenxor2) // neue Daten
+      //if(weichenxor2) // neue Daten
       {
 
-         /*
-         if((weichentastencodeE & (1<<5))==0) // Taste 6 gedrueckt
+         
+         if((weichentastencodeE & (1<<6))==0) // Taste 6 gedrueckt
          {
-            mcp2.gpioDigitalWrite(GPA7,0); //
+            mcp2.gpioDigitalWrite(8,1); //
          }
         
          if((weichentastencodeE & (1<<5))==0) // Taste 5 gedrueckt
          {
-            mcp2.gpioDigitalWrite(GPA7,1); //
+            mcp2.gpioDigitalWrite(8,0); //
          }
-         */
+         
          oldweichentastencodeE = weichentastencodeE;
       } // if(weichentastencodeDE ^ 
 
@@ -1267,20 +1285,20 @@ void loop()
       if(weichenxor3) // neue Daten
       {
 
-         /*
+         
          if((weichentastencodeF & (1<<6))==0) // Taste 6 gedrueckt
          {
-            mcp2.gpioDigitalWrite(GPB7,0); //
+            mcp2.gpioDigitalWrite(7,0); //
          }
         
          if((weichentastencodeF & (1<<5))==0) // Taste 5 gedrueckt
          {
-            mcp2.gpioDigitalWrite(GPB7,1); //
+            mcp2.gpioDigitalWrite(7,1); //
          }
-         */
+         
          oldweichentastencodeF = weichentastencodeF;
       } // 
-
+      
       // Pot auslesen
       
       for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
@@ -1500,10 +1518,26 @@ void loop()
      if (loopcounter%2 == 0)
      {
       mcp2.gpioDigitalWrite(0,1); //
+      //mcp1.gpioDigitalWrite(15,1); //
+      for(uint8_t i=15;i<16;i++)
+      {
+      //mcp1.gpioDigitalWrite(i,1); //
+      //mcp2.gpioDigitalWrite(i,1); //
+      //mcp1.gpioDigitalWrite(i+8,1); //
+      }
+     
      }
      else
      {
       mcp2.gpioDigitalWrite(0,0); //
+      //mcp1.gpioDigitalWrite(15,0); //
+      for(uint8_t i=15;i<16;i++)
+      {
+      //mcp1.gpioDigitalWrite(i,0); //
+      //mcp2.gpioDigitalWrite(i,0); //
+      //mcp1.gpioDigitalWrite(i+8,1); //
+      }
+     
      }
       lcd.setCursor(19,0);
       lcd.print(char('A' + asciicounter));
