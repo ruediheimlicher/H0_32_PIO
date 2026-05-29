@@ -143,6 +143,24 @@ static unsigned char pfeil_left[] =
 #define arrow_left_width 8
 #define arrow_left_height 8
 
+#define GPA0 0
+#define GPA1 1
+#define GPA2 2
+#define GPA3 3
+#define GPA4 4
+#define GPA5 5
+#define GPA6 6
+#define GPA7 7
+
+#define GPB0 8
+#define GPB1 9
+#define GPB2 10
+#define GPB3 11
+#define GPB4 12
+#define GPB5 13
+#define GPB6 14
+#define GPB7 15
+
 #endif
 
 
