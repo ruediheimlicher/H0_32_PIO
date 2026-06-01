@@ -2654,8 +2654,8 @@ void loop()
       //// Serial.println("USB END");
    } // n>0
    
-#pragma mark local
-   else if (sourcestatus & 0x01)
+   #pragma mark local
+   else if (sourcestatus & 0x01) // local
    {
      // if (digitalReadFast(SOURCECONTROL) == 1)
      
