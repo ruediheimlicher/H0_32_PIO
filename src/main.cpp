@@ -247,6 +247,82 @@ gpio_MCP23S17 mcp2(SPI_SR_CS,0x22);//instance 0 (address A0=1, A1 = A2 = 0)
 uint8_t regA = 0x0;
 uint8_t regB = 0;
 
+#define ANZWEICHENGRUPPEN 1
+#define GRUPPE_0  0
+#define GRUPPE_1  1
+uint8_t weichenaddressarray[2][4] =  {{2,2,2,1},{2,2,1,1}};
+uint8_t weichenposition[2] = {}; // 0: gerade 1: ablenkung
+
+# define RINGBUFFER_SIZE 32
+#define RINGBUFFER_MASK (RINGBUFFER_SIZE - 1)
+
+typedef struct
+{
+   uint8_t weiche;
+   uint8_t richtung;
+}weichendata;
+
+typedef struct {
+    weichendata data[RINGBUFFER_SIZE];
+    volatile uint8_t head;
+    volatile uint8_t tail;
+} RingBuffer; // ringbuffer fuer weichenposition
+
+void rb_init(RingBuffer *rb)
+{
+    rb->head = 0;
+    rb->tail = 0;
+}
+
+
+bool rb_is_empty(RingBuffer *rb)
+{
+    return rb->head == rb->tail;
+}
+
+bool rb_is_full(RingBuffer *rb)
+{
+    return ((rb->head + 1) & RINGBUFFER_MASK)== rb->tail;
+}
+
+bool rb_push(RingBuffer *rb, weichendata value)
+{
+    uint16_t next = (rb->head + 1) & RINGBUFFER_MASK;
+
+    if (next == rb->tail)
+        return false; // voll
+
+    rb->data[rb->head] = value;
+    rb->head = next;
+
+    return true;
+}
+
+int rb_pop(RingBuffer *rb, weichendata * value)
+{
+    if (rb_is_empty(rb))
+        return -1; // leer
+
+    *value = rb->data[rb->tail];
+    rb->tail = (rb->tail + 1) & RINGBUFFER_MASK;
+
+    return 0;
+}
+
+uint16_t rb_count(RingBuffer *rb)
+{
+    if (rb->head >= rb->tail)
+        return rb->head - rb->tail;
+
+    return RINGBUFFER_SIZE - rb->tail + rb->head;
+}
+
+
+RingBuffer weichenringbuffer = {0};
+uint8_t rinbuffercounter = 0;
+
+
+
 volatile uint8_t tastencodeA = 0;
 volatile uint8_t tastencodeB = 0;
 volatile uint8_t tastencodeC = 0;
@@ -375,7 +451,7 @@ volatile uint8_t weichenstatus = 0;
 volatile uint16_t weichencounter = 0;
 volatile uint8_t tastencounter = 0;
 
-volatile uint8_t weichencode = 0;
+//volatile uint8_t weichencode = 0;
 volatile uint8_t weichenbuffer[4] = {};
 
 
@@ -764,14 +840,35 @@ void setup()
    // mcp1
    /* *********************************** */
    mcp1.begin(0);
-   mcp1.gpioPinMode(0x6060);// A7 output, A6,A5 input
-   mcp1.gpioPort(0xFFFF); // alle HI
+   /*
+   pin mode:
+   Bank B
+   7  : out w0
+   5,6: in
+   4  : out w1
+   3,2: in
+   1,0: aux, default out
+   
 
+   Bank A
+   15    :out w2
+   14,13 : in
+   12    : out w3
+   11,10 : in
+   9,8   : aux, default out
+
+   bin: 0110 1100 0110 1100
+   hex: 6C6C
+
+   */
+   mcp1.gpioPinMode(0x6C6C);// A7 output, A6,A5 input
+   mcp1.gpioPort(0xFFFF); // alle HI
+   
   /* *********************************** */
    // mcp2
    /* *********************************** */
    mcp2.begin(0);
-   mcp2.gpioPinMode(0x0060);// A7 output, A6,A5 input
+   mcp2.gpioPinMode(0x6C6C);// A7 output, A6,A5 input
    mcp2.gpioPort(0xFFFF); // alle HI
 
    
@@ -1211,94 +1308,186 @@ void loop()
       
       tastenstatusA |= tastencodeB;
 
+      // Weichen
+
+      weichenposition[GRUPPE_0] = 0;
+
+      uint8_t weichencode = 10;
+      weichendata w ;
       weichentastencodeC = mcp1.gpioReadPortA();
       weichenxor0 = weichentastencodeC ^ oldweichentastencodeC;
-      //if(weichenxor0) // neue Daten
+      if(weichenxor0) // neue Daten
       {
-         
-         if((weichentastencodeC & (1<<6))==0) // Taste 6 gedrueckt
+         // Weiche A Position 0
+         if((weichentastencodeC & (1<<6))==0) // Taste 6 gedrueckt , weiche0
          {
+
             mcp1.gpioDigitalWrite(15,0); // GPA7
+            weichenposition[GRUPPE_0] &= ~(1<<0); // bit fuer weiche loeschen
+            w = {.weiche = 0, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
+            
          }
         
-         if((weichentastencodeC & (1<<5))==0) // Taste 5 gedrueckt
+         if((weichentastencodeC & (1<<5))==0) // Taste 5 gedrueckt weiche0
          {
             mcp1.gpioDigitalWrite(15,1); //
+            weichenposition[GRUPPE_0] |= (1<<0); // bit fur weiche setzen
+            w = {.weiche = 0, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
          }
          
+         // Weiche B Position 1
+         if((weichentastencodeC & (1<<3))==0) // Taste 3 gedrueckt , weiche1
+         {
+            mcp1.gpioDigitalWrite(12,0); // GPA7
+            weichenposition[GRUPPE_0] &= ~(1<<1); 
+            w = {.weiche = 1, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
+         }
+        
+         if((weichentastencodeC & (1<<2))==0) // Taste 2 gedrueckt weiche1
+         {
+            mcp1.gpioDigitalWrite(12,1); //
+            weichenposition[GRUPPE_0] |= (1<<1); 
+            w = {.weiche = 1, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
+         }
+
          oldweichentastencodeC = weichentastencodeC;
       } // if(weichentastencodeD ^ 
 
-
-
-      //digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
-      
-
-      //mcp1.gpioDigitalWrite(7,((weichentastencounter++) & 0x01)); // 
-    
       weichentastencodeD = mcp1.gpioReadPortB(); //& 0x7F;
       weichenxor1 = weichentastencodeD ^ oldweichentastencodeD;
       if(weichenxor1) // neue Daten
       {
-
-         if((weichentastencodeD & (1<<6))==0) // Taste 6 gedrueckt
+         // Weiche C Position 2
+         if((weichentastencodeD & (1<<6))==0) // Taste 6 gedrueckt 
          {
             mcp1.gpioDigitalWrite(7,0); // GPB7
+            w = {.weiche = 2, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
          }
         
          if((weichentastencodeD & (1<<5))==0) // Taste 5 gedrueckt
          {
             mcp1.gpioDigitalWrite(7,1); //
+            w = {.weiche = 2, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
          }
 
+         // Weiche D Position 1
+         if((weichentastencodeD & (1<<3))==0) // Taste 3 gedrueckt , weiche3
+         {
+            mcp1.gpioDigitalWrite(4,0); // GPA7
+            w = {.weiche = 3, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
+         }
+        
+         if((weichentastencodeD & (1<<2))==0) // Taste 2 gedrueckt weiche3
+         {
+            mcp1.gpioDigitalWrite(4,1); //
+            w = {.weiche = 3, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
+         }
+
+
          oldweichentastencodeD = weichentastencodeD;
+
+
+
       } // if(weichentastencodeD ^ 
 
 
 
       // mcp2
-      _delay_us(2);
+      //_delay_us(2);
       weichentastencodeE = mcp2.gpioReadPortA(); //& 0x7F;
 
       weichenxor2 = weichentastencodeE ^ oldweichentastencodeE;
-      //if(weichenxor2) // neue Daten
+      if(weichenxor2) // neue Daten
       {
 
-         
-         if((weichentastencodeE & (1<<6))==0) // Taste 6 gedrueckt
+         // Weiche E Position 4
+         if((weichentastencodeE & (1<<6))==0) // Taste 3 gedrueckt
          {
-            mcp2.gpioDigitalWrite(8,1); //
+            mcp2.gpioDigitalWrite(15,0); //
+            w = {.weiche = 4, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
          }
         
-         if((weichentastencodeE & (1<<5))==0) // Taste 5 gedrueckt
+         if((weichentastencodeE & (1<<5))==0) // Taste 2 gedrueckt
          {
-            mcp2.gpioDigitalWrite(8,0); //
+            mcp2.gpioDigitalWrite(15,1); //
+            w = {.weiche = 4, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
          }
          
+         // Weiche F Position 5
+         if((weichentastencodeE & (1<<3))==0) // Taste 3 gedrueckt , weiche1
+         {
+            mcp2.gpioDigitalWrite(12,0); // GPA7
+            w = {.weiche = 5, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
+         }
+        
+         if((weichentastencodeE & (1<<2))==0) // Taste 2 gedrueckt weiche1
+         {
+            mcp2.gpioDigitalWrite(12,1); //
+            w = {.weiche = 5, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
+         }
+
+
          oldweichentastencodeE = weichentastencodeE;
       } // if(weichentastencodeDE ^ 
 
-      _delay_us(2);
+      //_delay_us(2);
+
       weichentastencodeF = mcp2.gpioReadPortB(); //& 0x7F;
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
-      
       if(weichenxor3) // neue Daten
       {
 
-         
          if((weichentastencodeF & (1<<6))==0) // Taste 6 gedrueckt
          {
             mcp2.gpioDigitalWrite(7,0); //
+            weichenposition[GRUPPE_0] &= ~(1<<2); 
+            w = {.weiche = 6, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
          }
         
          if((weichentastencodeF & (1<<5))==0) // Taste 5 gedrueckt
          {
             mcp2.gpioDigitalWrite(7,1); //
+            weichenposition[GRUPPE_0] |= (1<<2); 
+            w = {.weiche = 6, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
          }
-         
+         // Weiche F Position 1
+         if((weichentastencodeF & (1<<3))==0) // Taste 3 gedrueckt , weiche3
+         {
+            mcp2.gpioDigitalWrite(4,0); // GPA7
+            weichenposition[GRUPPE_0] &= ~(1<<1); 
+            w = {.weiche = 7, .richtung = 0};
+            rb_push(&weichenringbuffer, w);
+         }
+        
+         if((weichentastencodeF & (1<<2))==0) // Taste 2 gedrueckt weiche3
+         {
+            mcp2.gpioDigitalWrite(4,1); //
+            weichenposition[GRUPPE_0] |= (1<<1); 
+            w = {.weiche = 7, .richtung = 1};
+            rb_push(&weichenringbuffer, w);
+         }
+
+
          oldweichentastencodeF = weichentastencodeF;
       } // 
       
+      
+
+
       // Pot auslesen
       
       for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
@@ -1469,6 +1658,30 @@ void loop()
       //lcd.print(weichentastenstatusD, HEX);
       //oldweichentastencodeD = weichentastencodeD;
       //mcp1.gpioDigitalWrite(7,0); //
+      if(rb_count(&weichenringbuffer))
+      {
+         weichendata w;
+
+         int  erfolg = rb_pop(&weichenringbuffer,&w);
+         if (erfolg == 0)
+         {
+            lcd.setCursor(0,2);
+            lcd.print(w.weiche,HEX);
+            lcd.setCursor(4,2);
+            lcd.print(w.richtung,HEX);
+
+         }
+         else
+         {
+            lcd.setCursor(0,2);
+            lcd.print("***");
+         }
+
+
+      }
+      
+
+      
 
 
       /*    
@@ -1488,15 +1701,17 @@ void loop()
       }
       else if (sourcestatus & 0x02)
       {
-       
+         
+
       }
 
-      lcd.setCursor(4,2);
+      lcd.setCursor(8,2);
       lcdputint3(weichencounter);
       lcd.print(' ');
       lcdputint3(tastencounter);
       lcd.print(' ');
       lcdputint3(weichenstatus);
+
 
 
       /*
@@ -1517,26 +1732,14 @@ void loop()
      
      if (loopcounter%2 == 0)
      {
-      mcp2.gpioDigitalWrite(0,1); //
-      //mcp1.gpioDigitalWrite(15,1); //
-      for(uint8_t i=15;i<16;i++)
-      {
-      //mcp1.gpioDigitalWrite(i,1); //
-      //mcp2.gpioDigitalWrite(i,1); //
-      //mcp1.gpioDigitalWrite(i+8,1); //
-      }
+      mcp1.gpioDigitalWrite(0,1); //
+      
      
      }
      else
      {
-      mcp2.gpioDigitalWrite(0,0); //
-      //mcp1.gpioDigitalWrite(15,0); //
-      for(uint8_t i=15;i<16;i++)
-      {
-      //mcp1.gpioDigitalWrite(i,0); //
-      //mcp2.gpioDigitalWrite(i,0); //
-      //mcp1.gpioDigitalWrite(i+8,1); //
-      }
+      mcp1.gpioDigitalWrite(0,0); //
+      
      
      }
       lcd.setCursor(19,0);
@@ -1714,7 +1917,7 @@ void loop()
 
          switch (usbtask)
          {
-            case 0xBF:
+            case 0xBF: // Weiche
             {
                loknummer = ANZLOKS - 1; // letztes Paket, Weichen
                //  address
@@ -1737,7 +1940,6 @@ void loop()
                weichenbuffer[2] = tritarray[buffer[10]];
                weichenbuffer[3] = tritarray[buffer[11]]; // OPEN
 
-               weichencode = buffer[17];
                tastencounter++;
 
 
@@ -1748,12 +1950,12 @@ void loop()
                   
                }
                
-               speed_raw  = buffer[17]; // Weiche
+               speed_raw  = buffer[17]; // Weiche 0..7, 3 bit
                speed = speed_raw;
 
-              uint8_t  speed_send = 0;
+              //uint8_t  speed_send = 0;
 
-               for (uint8_t i=3;i!=255;i--)
+               for (uint8_t i=3;i!=255;i--) // i decrement 3..0
                {
                   if (speed & (1<<i))
                   {
@@ -1761,7 +1963,7 @@ void loop()
                      //taskarray[0][8-i] = HI;
                      taskarray[loknummer][5+i] = HI;
                      //lcd.print("1");
-                     speed_send |= (1<<i);
+                     //speed_send |= (1<<i);
                   }
                   else
                   {
@@ -1769,7 +1971,7 @@ void loop()
                      //taskarray[0][8-i] = LO;
                      taskarray[loknummer][5+i] = LO;
                      //lcd.print("0");
-                     speed_send &= ~(1<<i);
+                     //speed_send &= ~(1<<i);
                      
                   }
                   
@@ -2657,9 +2859,61 @@ void loop()
    #pragma mark local
    else if (sourcestatus & 0x01) // local
    {
-     // if (digitalReadFast(SOURCECONTROL) == 1)
-     
-      for (uint8_t localnum = 0;localnum < ANZLOKALLOKS;localnum++)
+      
+      // Weichen
+
+      /*
+      pin mode:
+      Bank B
+      7  : out w0
+      5,6: in
+      4  : out w1
+      3,2: in
+      1,0: aux, default out
+      
+
+      Bank A
+      15    :out w2
+      14,13 : in
+      12    : out w3
+      11,10 : in
+      9,8   : aux, default out
+
+      bin: 0110 1100 0110 1100
+      hex: 6C6C
+
+      */
+     // Adresse setzen
+     // weichengruppe 0: 0..7
+     // weichengruppe 1: 8..15
+      for (uint8_t weichengruppe = 0;weichengruppe < ANZWEICHENGRUPPEN;weichengruppe++)
+      {
+         loknummer = ANZLOKS - weichengruppe; // letztes Paket für 1 Gruppe, Weichen
+         
+         for (uint8_t i=0;i<4;i++)
+         {
+            taskarray[loknummer][i] = tritarray[weichenaddressarray[0][i]]; // 0..3
+            // rep
+            taskarray[loknummer][i+12] = tritarray[weichenaddressarray[0][i]]; // 12..15
+         }
+
+         if(weichenposition[0] & (1<<0))
+         {
+            taskarray[loknummer][16] = 1; // Ablenkung
+         }
+         else
+         {
+            taskarray[loknummer][16] = 0; // gerade
+         }
+      
+
+
+      }
+
+     // end Weichen
+
+
+      for (uint8_t localnum = 0;localnum < ANZLOKALLOKS-1;localnum++) // Loks, ohne Weichen
       {
          
          loknummer =localnum;
