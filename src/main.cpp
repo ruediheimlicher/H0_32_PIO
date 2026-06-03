@@ -89,7 +89,7 @@ Signal data;
 void ResetData()
 {
     data.task = 0;
-   data.A = 127;
+   data.A = 127; // pot
    data.B = 127;
    data.C= 127;
 
@@ -118,8 +118,7 @@ ADC *adc = new ADC(); // adc object
 // Set parameters
 
 #define TEST 1
-// Include application, user and local libraries
-// !!! Help http://bit.ly/2CL22Qp
+
 
 
 // Define structures and classes
@@ -189,7 +188,7 @@ volatile uint16_t speedarray[5];
 
 volatile uint16_t localspeedarray[5]; // speedarray potwerte  local
 
-volatile uint16_t loknummerTRITarray[ANZLOKS] = {0};
+volatile uint16_t loknummerTRITarray[4] = {0};
 volatile uint8_t loknummer = 0;
 
 volatile uint8_t speed = 0;
@@ -451,7 +450,6 @@ volatile uint8_t weichenstatus = 0;
 volatile uint16_t weichencounter = 0;
 volatile uint8_t tastencounter = 0;
 
-//volatile uint8_t weichencode = 0;
 volatile uint8_t weichenbuffer[4] = {};
 
 
@@ -1209,12 +1207,11 @@ void loop()
             radio.flush_rx();
 
             // speed
-            localpotarray[2] =  ackData[0];
-            localpotarray[3] =  ackData[2];
+            localpotarray[2] =  ackData[0];// von nRF pot 2
+            localpotarray[3] =  ackData[2];// von nRF pot 3
 
             // code
-            //tastencodeC = 0xFF - ackData[1];
-            tastencodeC = ackData[1];
+            tastencodeC = ackData[1]; // data von diptasten
 
             uint8_t tastencodeC_raw = (tastencodeC & 0xF0) >> 4; // oberste 4 Bit diptasten
             
@@ -1312,8 +1309,7 @@ void loop()
 
       weichenposition[GRUPPE_0] = 0;
 
-      uint8_t weichencode = 10;
-      weichendata w ;
+      weichendata w ; // data in ringbuffer
       weichentastencodeC = mcp1.gpioReadPortA();
       weichenxor0 = weichentastencodeC ^ oldweichentastencodeC;
       if(weichenxor0) // neue Daten
@@ -1665,6 +1661,8 @@ void loop()
          int  erfolg = rb_pop(&weichenringbuffer,&w);
          if (erfolg == 0)
          {
+             lcd.setCursor(6,2);
+            lcd.print("+");
             lcd.setCursor(0,2);
             lcd.print(w.weiche,HEX);
             lcd.setCursor(4,2);
@@ -1678,6 +1676,11 @@ void loop()
          }
 
 
+      }
+      else
+      {
+         lcd.setCursor(6,2);
+         lcd.print("-");
       }
       
 
@@ -1695,9 +1698,9 @@ void loop()
       lcd.setCursor(4,0);
       lcdputint3(localpotarray[1]);
        lcd.setCursor(8,0);
-      lcdputint3(localpotarray[2]);
+      lcdputint3(localpotarray[2]); // von nRF pot 2
       lcd.setCursor(12,0);
-      lcdputint3(localpotarray[3]);
+      lcdputint3(localpotarray[3]); // von nRF pot 3
       }
       else if (sourcestatus & 0x02)
       {
