@@ -348,7 +348,6 @@ volatile uint8_t usbcodearray[4] = {};    // Lok-Codes (Richtung, Funktion)
 
 uint8_t tastenstatusB = 0;
 
-uint8_t potarray[ANZLOKS] = {};
 uint8_t localpotarray[ANZLOKALLOKS] = {};
 volatile uint8_t speedraw0 = 0;
 volatile uint8_t speedraw1 = 0;
@@ -375,7 +374,7 @@ const char *buffercode[4] = {"BUFFER_FAIL", "BUFFER_SUCCESS", "BUFFER_FULL", "BU
 #define OPEN 0x02FE // 0000001011111110
 
 #define TIMERINTERVALL 24
-#define PAUSE 10
+#define PAUSE 20
 // Utilities
 elapsedMillis sinceringbuffer;
 
@@ -526,6 +525,7 @@ void pakettimerfunction()
       {
          // digitalWriteFast(LOKSYNC,LOW);
       }
+
       if (paketpos == ANZLOKALLOKS - 1) // Weiche
       {
          // weichebyte6 = taskarray[paketpos][2];
@@ -537,14 +537,14 @@ void pakettimerfunction()
    if (aktualcommand & (1 << commandpos))
    {
       digitalWriteFast(OUT_PIN, HIGH);
-      digitalWriteFast(OUT_PIN_INV, LOW);
+      //digitalWriteFast(OUT_PIN_INV, LOW);
 
       digitalWriteFast(CONTROL_PIN, HIGH);
    }
    else
    {
       digitalWriteFast(OUT_PIN, LOW);
-      digitalWriteFast(OUT_PIN_INV, HIGH);
+      //digitalWriteFast(OUT_PIN_INV, HIGH);
 
       digitalWriteFast(CONTROL_PIN, LOW);
    }
@@ -561,7 +561,7 @@ void pakettimerfunction()
       // digitalWriteFast(LOKSYNC,HIGH);
 
       digitalWriteFast(OUT_PIN, LOW);
-      digitalWriteFast(OUT_PIN_INV, HIGH);
+      //digitalWriteFast(OUT_PIN_INV, HIGH);
 
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
@@ -577,8 +577,8 @@ void pakettimerfunction()
                //
                // OSZI_B_LO();
                paketpos = 0;
-               // taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-               // taskarray[ANZLOKS - 1][15] = HI;
+                taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+                taskarray[ANZLOKS - 1][15] = HI;
                // OSZI_B_HI();
             }
          }
@@ -779,14 +779,17 @@ void setup()
    //
 
    mcp0.gpioPort(0xCC33);
-   lcd.setCursor(18, 0);
-   lcd.print('B');
+   //lcd.setCursor(18, 0);
+   //lcd.print('B');
 
    /* *********************************** */
    // mcp1
    /* *********************************** */
-   _delay_ms(1);
+   _delay_ms(100);
+
    mcp1.begin(0);
+   
+
    lcd.setCursor(18, 0);
    lcd.print('X');
    /*
@@ -837,36 +840,17 @@ void setup()
    adressearray[3] = OPEN;
 
    speed = 0;
-   // Serial.print("speed: ");
-   // Serial.print(speed);
-   // Serial.print("\n");
-   // Serial.print("a: ");
-   // Serial.print(speed & (1<<0));
-   // Serial.print(" b: ");
-   // Serial.print(speed & (1<<1));
-   // Serial.print(" c: ");
-   // Serial.print(speed & (1<<2));
-   // Serial.print(" d: ");
-   // Serial.print(speed & (1<<3));
-   // Serial.print("\n");
-
-   // init_analog();
+   
    for (uint8_t i = 0; i < 4; i++)
    {
-      // Serial.print(" i: "); // Serial.print(i);
-      // Serial.print(" data: ");// Serial.print(speed & (1<<i));
-      // Serial.print("\n");
-      if (speed & (1 << i))
+        if (speed & (1 << i))
       {
-         // Serial.print("HI");
          speedarray[i] = HI;
       }
       else
       {
-         // Serial.print("LO");
          speedarray[i] = LO;
       }
-      // Serial.print("\n");
    }
 
    lcd.setCursor(18, 0);
@@ -1250,9 +1234,9 @@ void loop()
 
       // Weichen
 
-      weichenposition[GRUPPE_0] = 0;
 
       weichendata w; // data in ringbuffer
+      
       weichentastencodeC = mcp1.gpioReadPortA();
       weichenxor0 = weichentastencodeC ^ oldweichentastencodeC;
       if (weichenxor0) // neue Daten
@@ -1415,7 +1399,7 @@ void loop()
 
          oldweichentastencodeF = weichentastencodeF;
       } //
-
+      
       // Pot auslesen
 
       for (uint8_t i = 0; i < ANZLOKALLOKS - 2; i++)
@@ -1530,20 +1514,22 @@ void loop()
 
    if (weichenstatus & (1 << WEICHESTART))
    {
-
-      if (weichencounter < 64)
+      if (sourcestatus & 0x02) // USB
       {
-         weichencounter++;
-      }
-      if (weichencounter == 24)
-      {
-         taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-         taskarray[ANZLOKS - 1][15] = HI;
-      }
-      else if (weichencounter >= 63)
-      {
-         // weichencounter = 64;
-         weichenstatus &= ~(1 << WEICHESTART);
+         if (weichencounter < 64)
+         {
+            weichencounter++;
+         }
+         if (weichencounter == 24)
+         {
+            taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+            taskarray[ANZLOKS - 1][15] = HI;
+         }
+         else if (weichencounter >= 63)
+         {
+            // weichencounter = 64;
+            weichenstatus &= ~(1 << WEICHESTART);
+         }
       }
    }
 
@@ -2731,7 +2717,7 @@ void loop()
       // weichengruppe 1: 8..15
       for (uint8_t weichengruppe = 0; weichengruppe < ANZWEICHENGRUPPEN; weichengruppe++)
       {
-         loknummer = ANZLOKS - weichengruppe; // letztes Paket für 1 Gruppe, Weichen
+         loknummer = ANZLOKALLOKS - weichengruppe; // letztes Paket für 1 Gruppe, Weichen
 
          for (uint8_t i = 0; i < 4; i++)
          {
