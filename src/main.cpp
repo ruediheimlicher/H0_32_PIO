@@ -140,7 +140,7 @@ ADC *adc = new ADC(); // adc object
 
 #define CURR_PIN     A6
 
-#define ANZLOKS       4
+#define ANZLOKS       6
 
 #define POT_0_PIN    A0
 #define POT_1_PIN    A1
