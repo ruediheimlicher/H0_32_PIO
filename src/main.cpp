@@ -211,7 +211,7 @@ float sinpos = 0;
 
 #define SPI_SR_CS 22
 
-#define ANZLOKALLOKS 4 // anz loks bei lokalem Betrieb
+#define ANZLOKALLOKS 4 // anz loks bei lokalem Betrieb > nur bei teensy4.0 relevant
 
 // cs 10
 // DIP-tasten, function
@@ -1139,7 +1139,7 @@ void setup()
 // Add loop code
 void loop()
 {
-////#pragma mark mcp
+   ////#pragma mark mcp
 
    if (sincemcp > 10)
    {
@@ -1420,13 +1420,16 @@ void loop()
 
       for (uint8_t i = 0; i < ANZLOKALLOKS - 2; i++)
       {
-         localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
-         sendbuffer[16 + i] = localpotarray[i];
+         if (i < 4)
+         {
+            localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
+            sendbuffer[16 + i] = localpotarray[i];
+         }
       }
 
    } // if (sincemcp )
 
-//#pragma mark EMITTER
+   // #pragma mark EMITTER
    if (sinceemitter > 200)
    {
       sinceemitter = 0;
@@ -1755,8 +1758,8 @@ void loop()
 
    } // if sincblinkk 500
 
-// loknummerTRITarray[0] = 3;
-//#pragma mark USB
+   // loknummerTRITarray[0] = 3;
+   // #pragma mark USB
    int n;
    n = RawHID.recv(buffer, 10); //
    if (n > 0)
@@ -1799,7 +1802,7 @@ void loop()
       }
 
       // // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
-//#pragma mark TASK
+      // #pragma mark TASK
       if (sourcestatus & 0x02) // USB
       {
          usbadressearray[0] = buffer[8];
@@ -2696,7 +2699,7 @@ void loop()
       //// Serial.println("USB END");
    } // n>0
 
-//#pragma mark local
+   // #pragma mark local
    else if (sourcestatus & 0x01) // local
    {
 
@@ -2952,7 +2955,7 @@ void loop()
 
    } // local
 
-//#pragma mark sincewegbuffer
+   // #pragma mark sincewegbuffer
 
    if ((sincewegbuffer > 1000)) // && (usbtask == SET_WEG)) // naechster Schritt
    {
@@ -2992,7 +2995,7 @@ void loop()
       // if ((schrittecount < anzschritte ) && (wegstatus & (1<<WEG_OK)))//&& ((abschnittindex+1) == aktuellepos.index))
    }
 
-//#pragma mark sinceringbuffer
+   // #pragma mark sinceringbuffer
 
    if ((sinceringbuffer > 32)) // && (usbtask == SET_RING)) // naechster Schritt
    {
