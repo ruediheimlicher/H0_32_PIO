@@ -58,7 +58,7 @@
 #include <Adafruit_SSD1306.h>
 
 #define OLED_DC     6
-#define OLED_CS     7
+//#define OLED_CS     7
 #define OLED_RESET  8
 //Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
@@ -132,22 +132,25 @@ ADC *adc = new ADC(); // adc object
 #define LOOPLED      0 // 
 
 #define TAKT_PIN     4
-#define OUT_PIN      2
-#define OUT_PIN_INV  1
+//#define OUT_PIN      2
+//#define OUT_PIN_INV  1
 
-#define CONTROL_PIN  6
+#define CONTROL_PIN  6 // Signal out
 
 #define CURR_PIN     A6
 
 #define ANZLOKS       4
+
+#define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
+
 
 #define POT_0_PIN    A0
 #define POT_1_PIN    A1
 #define POT_2_PIN    A2
 #define POT_3_PIN    A3
 
-#define SOURCECONTROL    6 // Eingang, HI wenn local
-#define LOKSYNC         8
+//#define SOURCECONTROL    6 // Eingang, HI wenn local
+#define LOKSYNC         7
 
 
 
@@ -187,7 +190,7 @@ volatile uint16_t speedarray[5];
 
 volatile uint16_t localspeedarray[5]; // speedarray potwerte  local
 
-volatile uint16_t loknummerTRITarray[ANZLOKS] = {0};
+volatile uint16_t loknummerTRITarray[4] = {0};
 volatile uint8_t loknummer = 0;
 
 volatile uint8_t speed = 0;
@@ -225,7 +228,7 @@ float sinpos = 0;
 
 
 
-#define ANZLOKALLOKS       4 // anz loks bei lokalem Betrieb
+
 
 // cs 10
 gpio_MCP23S17 mcp0(SPI_MCP_CS,0x20);//instance 0 (address A0,A1,A2 tied to 0)
@@ -418,7 +421,6 @@ void pakettimerfunction()
     HI     0xFEFE  // 1111111011111110
     */
    
-   //digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
    
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
    
@@ -428,9 +430,10 @@ void pakettimerfunction()
       //OSZI_A_TOGG();
       if(paketpos == 0)
          {
-         OSZI_A_LO();
+         OSZI_A_LO(); // sync
          //digitalWriteFast(LOKSYNC,LOW);
          }
+
       if(paketpos == 1)
          {
          //OSZI_A_HI();
@@ -459,20 +462,16 @@ void pakettimerfunction()
    //OSZI_A_HI();
    if (aktualcommand & (1<<commandpos))
    {
-      digitalWriteFast(OUT_PIN,HIGH);
-      digitalWriteFast(OUT_PIN_INV,LOW);
-      
+     
       digitalWriteFast(CONTROL_PIN,HIGH);
       
    }
    else
    {
-      digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
       
       digitalWriteFast(CONTROL_PIN,LOW);
    }
-   //digitalWriteFast(LOKSYNC,HIGH);
+   //
    if (commandpos < 15)
    {
       commandpos++;
@@ -482,10 +481,7 @@ void pakettimerfunction()
    {
       commandpos = 0;
       OSZI_A_HI();
-      //digitalWriteFast(LOKSYNC,HIGH);
       
-      digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
       
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
@@ -640,12 +636,12 @@ void setup()
    //pinMode(TAKT_PIN, OUTPUT);
    //digitalWriteFast(TAKT_PIN, LOW); // LO, OFF 
 
-   pinMode(OUT_PIN, OUTPUT);
-   digitalWriteFast(OUT_PIN, LOW); // LO, OFF 
+   //pinMode(OUT_PIN, OUTPUT);
+   //digitalWriteFast(OUT_PIN, LOW); // LO, OFF 
 
    // Signal Invertiert
-   pinMode(OUT_PIN_INV, OUTPUT);
-    digitalWriteFast(OUT_PIN_INV, HIGH); // HI, OFF 
+   //pinMode(OUT_PIN_INV, OUTPUT);
+    //digitalWriteFast(OUT_PIN_INV, HIGH); // HI, OFF 
 
    // Control
    pinMode(CONTROL_PIN, OUTPUT);
@@ -850,6 +846,37 @@ void setup()
    taskarray[2][19] = taskarray[2][7];
    taskarray[2][20] = taskarray[2][8];
 
+   /*
+   for(uint8_t p = 3;p < 6;p++)
+   {
+   taskarray[p][0] = adressearray[0];
+   taskarray[p][1] = adressearray[1];
+   taskarray[p][2] = adressearray[2];
+   taskarray[p][3] = adressearray[3];
+   taskarray[p][4] = HI; // Lampe
+   taskarray[p][5] = speedarray[0];
+   taskarray[p][6] = speedarray[1];
+   taskarray[p][7] = speedarray[2];
+   taskarray[p][8] = speedarray[3];
+   
+   // pause
+   taskarray[p][9] = 0;
+   taskarray[p][10] = 0;
+   taskarray[p][11] = 0;
+   
+   // wiederholung
+   taskarray[p][12] = taskarray[p][0];
+   taskarray[p][13] = taskarray[p][1];
+   taskarray[p][14] = taskarray[p][2];
+   taskarray[p][15] = taskarray[p][3];
+   taskarray[p][16] = taskarray[p][4];
+   taskarray[p][17] = taskarray[p][5];
+   taskarray[p][18] = taskarray[p][6];
+   taskarray[p][19] = taskarray[p][7];
+   taskarray[p][20] = taskarray[p][8];
+
+   }
+   */
    /*
    commandarray0[0] = adressearray[0];
    commandarray0[1] = adressearray[1];
@@ -1302,7 +1329,7 @@ void loop()
 
    }
    */
-
+  weichenstatus = 0;
    if(weichenstatus & (1<<WEICHESTART))
    {   
          
