@@ -490,7 +490,7 @@ void pakettimerfunction()
          bytepos = 0;
          //OSZI_A_HI();
          //OSZI_B_LO();
-         if (paketpos <  2*paketmax -1) //pakete, jedes wird doppelt gesendet
+         if (paketpos < 2*paketmax - 1)// pakete, jedes wird doppelt gesendet
          {
             paketpos++; // jede Lok ein Paket
             if (paketpos == 2*paketmax - 1) // Paketserie fertig
@@ -652,7 +652,7 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   lcd.clear();
+   //lcd.clear();
    
    
    //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
