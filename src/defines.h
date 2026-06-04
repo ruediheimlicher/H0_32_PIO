@@ -110,6 +110,8 @@
 #define arrow_width 16
 #define arrow_height 16
 
+/*
+
 static unsigned char pfeil_right[] = 
 {
    0x00,0x02,0x06,0x0e,0x1e,0x3e,0x7e,0xfe,0xfe,0x7e,0x3e,0x1e,
@@ -137,7 +139,7 @@ static unsigned char pfeil_left[] =
   };
 
 
-
+*/
 
 
 #define arrow_left_width 8

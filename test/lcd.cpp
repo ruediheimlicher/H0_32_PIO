@@ -38,46 +38,46 @@
  
  */
 void
-lcd_initialize(uint8_t set_function, uint8_t set_entry_mode, uint8_t on)
+initialize(uint8_t set_function, uint8_t set_entry_mode, uint8_t on)
 {
    /* 20ms delay while LCD powers on */
    _delay_ms(30);      
    
    /* Write 0x30 to LCD and wait 5 mS for the instruction to complete */
-   lcd_load_byte(0x30);
-   lcd_send_cmd();
+   load_byte(0x30);
+   send_cmd();
    _delay_ms(10);
    
    /* Write 0x30 to LCD and wait 160 uS for instruction to complete */
-   lcd_load_byte(0x30);
-   lcd_send_cmd();
+   load_byte(0x30);
+   send_cmd();
    _delay_us(20);
    
    /* Write 0x30 AGAIN to LCD and wait 160 uS */
-   lcd_load_byte(0x30);
-   lcd_send_cmd();
+   load_byte(0x30);
+   send_cmd();
    _delay_us(160);
    
    /* Set function and wait 40uS */
-   lcd_load_byte(set_function);
-   lcd_send_cmd();
+   load_byte(set_function);
+   send_cmd();
    
    /* Turn off the display and wait 40uS */
-   lcd_load_byte(LCD_CMD_OFF);    
-   lcd_send_cmd();
+   load_byte(LCD_CMD_OFF);    
+   send_cmd();
    
    /* Clear display and wait 1.64mS */
-   lcd_load_byte(LCD_CMD_CLEAR);    
-   lcd_send_cmd();
+   load_byte(LCD_CMD_CLEAR);    
+   send_cmd();
    _delay_ms(4);
    
    /* Set entry mode and wait 40uS */
-   lcd_load_byte(set_entry_mode);    
-   lcd_send_cmd();
+   load_byte(set_entry_mode);    
+   send_cmd();
    _delay_ms(4);
    /* Turn display back on and wait 40uS */
-   lcd_load_byte(on);    
-   lcd_send_cmd();
+   load_byte(on);    
+   send_cmd();
    _delay_ms(40);
 };
 
@@ -88,7 +88,7 @@ lcd_initialize(uint8_t set_function, uint8_t set_entry_mode, uint8_t on)
  *      out_byte        The byte to load into the '164.
  */
 void 
-lcd_load_byte(uint8_t out_byte)
+load_byte(uint8_t out_byte)
 {
    /* make sure clock is low */
    //LCD_PORT &= ~_BV(LCD_CLOCK_PIN);
@@ -123,43 +123,43 @@ lcd_load_byte(uint8_t out_byte)
 
 /*
  * Loads the byte in the '164 shift register into the LCD as a command. The
- * '164 should already be loaded with the data using lcd_load_byte().
+ * '164 should already be loaded with the data using load_byte().
  */
 void
-lcd_send_cmd(void)
+send_cmd(void)
 {
    /* Data in '164 is a command, so RS must be low (0) */
    //LCD_PORT &= ~_BV(LCD_RSDS_PIN); 
    digitalWrite(LCD_RSDS_PIN,LOW);
-   lcd_strobe_E();   
+   strobe_E();   
    _delay_us(50);
    _delay_ms(DELTA);
 }
 
 /*
  * Loads the byte in the '164 shift register into the LCD as a character. The
- * '164 should already be loaded with the data using lcd_load_byte().
+ * '164 should already be loaded with the data using load_byte().
  */
 void
-lcd_send_char(void)
+send_char(void)
 {
    /* Data in '164 is a character, so RS must be high (1) */
    digitalWrite(LCD_RSDS_PIN,HIGH);
-   lcd_strobe_E();
+   strobe_E();
    _delay_us(50);
    _delay_ms(DELTA);
 }
 
-void lcd_setcustom(uint8_t pos, uint8_t* msg)
+void setcustom(uint8_t pos, uint8_t* msg)
 {
    uint8_t i;
    if (pos < 8)
    {
-      lcd_load_byte(0x40 + 8*pos);
-      lcd_send_cmd();
+      load_byte(0x40 + 8*pos);
+      send_cmd();
       for(i=0;i<8;i++)
       {
-         lcd_putc(msg[i]);
+         putc(msg[i]);
       }
       
    }
@@ -170,14 +170,14 @@ void lcd_setcustom(uint8_t pos, uint8_t* msg)
  *      c               The byte (character) to display
  */
 void 
-lcd_putc(const char c)
+putc(const char c)
 {
-   lcd_load_byte(c);
-   lcd_send_char();
+   load_byte(c);
+   send_char();
 }
 
 
-void lcd_putint(uint8_t zahl)
+void putint(uint8_t zahl)
 {
    char string[4];
    int8_t i;                             // schleifenzähler
@@ -188,9 +188,9 @@ void lcd_putint(uint8_t zahl)
       string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
       zahl /= 10;
    }
-   lcd_puts(string);
+   puts(string);
 }
-void lcd_putint12(uint16_t zahl)
+void putint12(uint16_t zahl)
 {
    char string[5];
    int8_t i;                             // schleifenzähler
@@ -201,7 +201,7 @@ void lcd_putint12(uint16_t zahl)
       string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
       zahl /= 10;
    }
-   lcd_puts(string);
+   puts(string);
    
 }
 void lcdputint12(char* zahlstring,uint16_t zahl)
@@ -221,7 +221,7 @@ void lcdputint12(char* zahlstring,uint16_t zahl)
 
 
 
-void lcd_putint16(uint16_t zahl)
+void putint16(uint16_t zahl)
 {
    char string[8];
    int8_t i;                             // schleifenzähler
@@ -232,10 +232,10 @@ void lcd_putint16(uint16_t zahl)
       string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
       zahl /= 10;
    }
-   lcd_puts(string);
+   puts(string);
 }
 
-void lcd_putint3(uint16_t zahl)     // int bis 1000
+void putint3(uint16_t zahl)     // int bis 1000
 {
    char string[4];
    int8_t i;                             // schleifenzähler
@@ -246,12 +246,12 @@ void lcd_putint3(uint16_t zahl)     // int bis 1000
       string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
       zahl /= 10;
    }
-   lcd_puts(string);
+   puts(string);
 }
 
 
 
-void lcd_putint2(uint8_t zahl)   //zweistellige Zahl
+void putint2(uint8_t zahl)   //zweistellige Zahl
 {
    char string[3];
    int8_t i;                        // Schleifenzähler
@@ -262,26 +262,26 @@ void lcd_putint2(uint8_t zahl)   //zweistellige Zahl
       string[i]=(zahl % 10) +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
       zahl /= 10;
    }
-   lcd_puts(string);
+   puts(string);
 }
 
-void lcd_putint1(uint8_t zahl)   //einstellige Zahl
+void putint1(uint8_t zahl)   //einstellige Zahl
 {
    //char string[5];
    char string[2];
    zahl%=10;                        //  hinterste Stelle
    string[1]='\0';                     // String Terminator
    string[0]=zahl +'0';         // Modulo rechnen, dann den ASCII-Code von '0' addieren
-   lcd_puts(string);
+   puts(string);
 }
 
-void lcd_hextobin(uint8_t hexzahl)
+void hextobin(uint8_t hexzahl)
 {
    
     // Convert hex to binary string
     for (int i = 7; i >= 0; i--) 
     {
-        lcd_putc((hexzahl & (1 << i)) ? '1' : '0');
+        putc((hexzahl & (1 << i)) ? '1' : '0');
     }
     
 }
@@ -291,16 +291,16 @@ void lcd_hextobin(uint8_t hexzahl)
  Input:    string to be displayed
  Returns:  none
  *************************************************************************/
-void lcd_puts(const char *s)
+void puts(const char *s)
 /* print string on lcd (no auto linefeed) */
 {
    register char c;
    
    while ( (c = *s++) ) {
-      lcd_putc(c);
+      putc(c);
    }
    
-}/* lcd_puts */
+}/* puts */
 
 
 /*
@@ -308,7 +308,7 @@ void lcd_puts(const char *s)
  * line determines wheter the byte is a character or a command.
  */
 void
-lcd_strobe_E(void)
+strobe_E(void)
 {
    /* strobe E signal */
    //LCD_PORT |= _BV(LCD_ENABLE_PIN);
@@ -324,10 +324,10 @@ lcd_strobe_E(void)
  * Moves the cursor to the home position.
  */
 void
-lcd_cursor_home(void)
+cursor_home(void)
 {
-   lcd_load_byte(LCD_CMD_HOME);
-   lcd_send_cmd();
+   load_byte(LCD_CMD_HOME);
+   send_cmd();
 }
 
 /*
@@ -337,11 +337,11 @@ lcd_cursor_home(void)
  *      pos             Position on that line (column)
  */
 void
-lcd_move_cursor(uint8_t line, uint8_t pos)
+move_cursor(uint8_t line, uint8_t pos)
 {
-   //fleury: lcd_command((1<<LCD_DDRAM)+addressCounter)
-   lcd_load_byte(line+pos);
-   lcd_send_cmd();
+   //fleury: command((1<<LCD_DDRAM)+addressCounter)
+   load_byte(line+pos);
+   send_cmd();
 }
 
 /*
@@ -350,12 +350,12 @@ lcd_move_cursor(uint8_t line, uint8_t pos)
  *      spaces          Number of spaces to move
  */
 void
-lcd_inc_cursor(uint8_t spaces)
+inc_cursor(uint8_t spaces)
 {
    while (spaces--)
    {
-      lcd_load_byte(LCD_CMD_CURSOR_RIGHT);
-      lcd_send_cmd();    
+      load_byte(LCD_CMD_CURSOR_RIGHT);
+      send_cmd();    
    }
 }
 
@@ -365,12 +365,12 @@ lcd_inc_cursor(uint8_t spaces)
  *      spaces          Number of spaces to move
  */
 void
-lcd_dec_cursor(uint8_t spaces)
+dec_cursor(uint8_t spaces)
 {
    while (spaces--)
    {
-      lcd_load_byte(LCD_CMD_CURSOR_LEFT);
-      lcd_send_cmd();    
+      load_byte(LCD_CMD_CURSOR_LEFT);
+      send_cmd();    
    }
 }
 
@@ -380,58 +380,58 @@ lcd_dec_cursor(uint8_t spaces)
  y  vertical position    (0: first line)
  Returns:  none
  *************************************************************************/
-void lcd_gotoxy(uint8_t x, uint8_t y)
+void gotoxy(uint8_t x, uint8_t y)
 {
    switch (y)
    {
       case 0:
-      lcd_load_byte((1<<LCD_DDRAM)+LCD_START_LINE1+x);
-      lcd_send_cmd();
+      load_byte((1<<LCD_DDRAM)+LCD_START_LINE1+x);
+      send_cmd();
       break;
       case 1:
-      lcd_load_byte((1<<LCD_DDRAM)+LCD_START_LINE2+x);
-      lcd_send_cmd();
+      load_byte((1<<LCD_DDRAM)+LCD_START_LINE2+x);
+      send_cmd();
       break;
       case 2:
-      lcd_load_byte((1<<LCD_DDRAM)+LCD_START_LINE3+x);
-      lcd_send_cmd();
+      load_byte((1<<LCD_DDRAM)+LCD_START_LINE3+x);
+      send_cmd();
       break;
       case 3:
-      lcd_load_byte((1<<LCD_DDRAM)+LCD_START_LINE4+x);
-      lcd_send_cmd();
+      load_byte((1<<LCD_DDRAM)+LCD_START_LINE4+x);
+      send_cmd();
       break;
    }//switch
    
    
-}/* lcd_gotoxy */
+}/* gotoxy */
 
 // Display loeschen
-void lcd_cls(void)   
+void cls(void)   
 {
-   lcd_load_byte(0x01);
-   lcd_send_cmd();
-   //   lcd_write(0x02,0);      // B 0000 0010 => Display loeschen
+   load_byte(0x01);
+   send_cmd();
+   //   write(0x02,0);      // B 0000 0010 => Display loeschen
    _delay_ms(2);         // dauert eine Weile, Wert ausprobiert
    
-   //   lcd_write(0x01,0);      // B 0000 0001 => Cursor Home
-   lcd_load_byte(0x02);
-   lcd_send_cmd();
+   //   write(0x01,0);      // B 0000 0001 => Cursor Home
+   load_byte(0x02);
+   send_cmd();
    
    _delay_ms(2);         // dauert eine Weile, Wert ausprobiert
 }
 
 
 // Linie Loeschen
-void lcd_clr_line(uint8_t Linie)
+void clr_line(uint8_t Linie)
 {
    
-   lcd_gotoxy(0,Linie);
+   gotoxy(0,Linie);
    uint8_t i=0;
    for (i=0;i<LCD_DISP_LENGTH;i++)
    {
-      lcd_putc(' ');
+      putc(' ');
    }
-   lcd_gotoxy(0,Linie);
+   gotoxy(0,Linie);
    _delay_ms(2);
 }   // Linie Loeschen
 
@@ -520,7 +520,7 @@ void r_itoa16(int16_t zahl, char* string)
  
  */
 
-void lcd_puthex(uint8_t zahl)
+void puthex(uint8_t zahl)
 {
    //char string[5];
    char string[3];
@@ -547,44 +547,44 @@ void lcd_puthex(uint8_t zahl)
    }
    
    
-   lcd_puts(string);
+   puts(string);
 }
 
 
 
 
-void lcd_put_frac(char* string, uint8_t start, uint8_t komma, uint8_t frac) 
+void put_frac(char* string, uint8_t start, uint8_t komma, uint8_t frac) 
 {
    
    uint8_t i;            // Zähler
    uint8_t flag=0;       // Merker für führende Nullen
    
    // Vorzeichen ausgeben  
-   if (string[0]=='-') lcd_putc('-'); else lcd_putc(' ');
+   if (string[0]=='-') putc('-'); else putc(' ');
    
    // Vorkommastellen ohne führende Nullen ausgeben
    for(i=start; i;i--) {
       if (flag==1 || string[i]!='0') {
-         lcd_putc(string[i]);
+         putc(string[i]);
          flag = 1;
       }
-      else lcd_putc(' ');         // Leerzeichen
+      else putc(' ');         // Leerzeichen
    }
    
-   lcd_putc('.');                // Komma ausgeben
+   putc('.');                // Komma ausgeben
    
    // Nachkommastellen ausgeben
-   for(; i<(komma+frac); i++) lcd_putc(string[i]);
+   for(; i<(komma+frac); i++) putc(string[i]);
    
 }
 
-void lcd_put_zeit(uint8_t minuten, uint8_t stunden)
+void put_zeit(uint8_t minuten, uint8_t stunden)
 {
    //                     13:15
    int8_t i; 
    if (stunden< 10)
    {
-      //   lcd_putc(' ');
+      //   putc(' ');
    }
    
    char zeitString[6];
@@ -617,28 +617,28 @@ void lcd_put_zeit(uint8_t minuten, uint8_t stunden)
    }
    
    
-   lcd_puts(zeitString);
+   puts(zeitString);
 }
 
-void lcd_put_wochentag(uint8_t wd)
+void put_wochentag(uint8_t wd)
 {
    const char* wochentag[] = {"MO","DI","MI","DO","FR","SA","SO"};
    
-   lcd_puts(wochentag[wd-1]);   // Array wochentag ist null-basiert
+   puts(wochentag[wd-1]);   // Array wochentag ist null-basiert
 }
 
-void lcd_put_temperatur(uint16_t temperatur)
+void put_temperatur(uint16_t temperatur)
 {
    char buffer[8]={};
    //uint16_t temp=(temperatur-127)*5;
    uint16_t temp=temperatur*5;
    //      uint16_t temp=temperatur;
-   lcd_gotoxy(0,1);
-   lcd_putint16(temp);
+   gotoxy(0,1);
+   putint16(temp);
    
    //      itoa(temp, buffer,10);
    r_itoa16(temp,buffer);
-   //      lcd_putc(' * ');
+   //      putc(' * ');
    
    char outstring[8]={};
    
@@ -669,35 +669,35 @@ void lcd_put_temperatur(uint16_t temperatur)
    /*
     if (temp<100)
     {
-    lcd_putc(' ');
+    putc(' ');
     }
     if (temp<10)
     {
-    lcd_putc(' ');
+    putc(' ');
     }
     */   
-   lcd_puts(outstring);
+   puts(outstring);
    
 }
 
 
-void lcd_put_tempbis99(uint16_t temperatur)
+void put_tempbis99(uint16_t temperatur)
 {
    char buffer[7]={};
    //uint16_t temp=(temperatur-127)*5;
-   //lcd_gotoxy(0,1);
-   //lcd_puts("t:\0");
-   //lcd_putint((uint8_t) temperatur);   
+   //gotoxy(0,1);
+   //puts("t:\0");
+   //putint((uint8_t) temperatur);   
    uint16_t temp=(temperatur)*5;
-   //lcd_puts("T:\0");
-   //lcd_putint16(temp);   
+   //puts("T:\0");
+   //putint16(temp);   
    
    //      uint16_t temp=temperatur;
    
    //      itoa(temp, buffer,10);
    r_itoa16(temp,buffer);
-   //      lcd_puts(buffer);
-   //      lcd_putc(' * ');
+   //      puts(buffer);
+   //      putc(' * ');
    
    char outstring[7]={};
    
@@ -720,19 +720,19 @@ void lcd_put_tempbis99(uint16_t temperatur)
    /*
     if (temp<100)
     {
-    lcd_putc(' ');
+    putc(' ');
     }
     if (temp<10)
     {
-    lcd_putc(' ');
+    putc(' ');
     }
     */   
-   lcd_puts(outstring);
+   puts(outstring);
    _delay_ms(2);
 }
 
 
-void lcd_put_tempAbMinus20(uint16_t temperatur)
+void put_tempAbMinus20(uint16_t temperatur)
 {
    
    char buffer[8]={};
@@ -745,8 +745,8 @@ void lcd_put_tempAbMinus20(uint16_t temperatur)
    }
    
    r_itoa16(temp,buffer);
-   //      lcd_puts(buffer);
-   //      lcd_putc(' * ');
+   //      puts(buffer);
+   //      putc(' * ');
    
    char outstring[7]={};
    
@@ -765,7 +765,7 @@ void lcd_put_tempAbMinus20(uint16_t temperatur)
       outstring[1]=buffer[4];
       outstring[0]=Vorzeichen;
    }
-   lcd_puts(outstring);
+   puts(outstring);
    _delay_ms(2);
 }
 

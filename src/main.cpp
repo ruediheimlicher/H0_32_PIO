@@ -30,6 +30,7 @@
 //#include <stdint.h>
 //#include <ADC.h>
 #include <ADC_util.h>
+#include <util/delay.h>
 
 #include <SPI.h>
 #include "gpio_MCP23S17.h"
@@ -57,9 +58,9 @@
 ////#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#define OLED_DC     6
+//#define OLED_DC     6
 //#define OLED_CS     7
-#define OLED_RESET  8
+//define OLED_RESET  8
 //Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
 
 
@@ -180,7 +181,7 @@ volatile uint8_t teensytask = 0;
 
 volatile uint16_t aktualcommand = 0;
 
-volatile uint16_t commandarray0[26] = {0};
+volatile uint16_t commandarray0[32] = {0};
 
 volatile uint16_t taskarray[8][32] = {0};
 
@@ -188,7 +189,7 @@ volatile uint16_t adressearray[4];
 volatile uint16_t eepromadressearray[8][4];
 volatile uint16_t speedarray[5];
 
-volatile uint16_t localspeedarray[5]; // speedarray potwerte  local
+//volatile uint16_t localspeedarray[ANZLOKALLOKS]; // speedarray potwerte  local
 
 volatile uint16_t loknummerTRITarray[4] = {0};
 volatile uint8_t loknummer = 0;
@@ -420,9 +421,13 @@ void pakettimerfunction()
     OPEN   0x02FE  // 0000001011111110
     HI     0xFEFE  // 1111111011111110
     */
+
+   /*
+   bytepos: pos im Paket von ANZLOKS 
+   */
    
    
-   aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
+   aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command, 16 bit
    
    
    if ((bytepos) == 0)
@@ -431,26 +436,22 @@ void pakettimerfunction()
       if(paketpos == 0)
          {
          OSZI_A_LO(); // sync
-         //digitalWriteFast(LOKSYNC,LOW);
          }
 
       if(paketpos == 1)
          {
          //OSZI_A_HI();
-         //digitalWriteFast(LOKSYNC,LOW);
          }
       // syncsignal
       //if ((sourcestatus & 0x01) && (paketpos == 1))// local
       if ((sourcestatus & 0x01) && (loknummer == 0))// local
-
       {
          //OSZI_A_LO();
-         //digitalWriteFast(LOKSYNC,LOW);
       }
       //
       else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
       {
-         //digitalWriteFast(LOKSYNC,LOW);
+
       }
       if(paketpos == ANZLOKALLOKS - 1) // Weiche
       {
@@ -460,7 +461,7 @@ void pakettimerfunction()
       }
    }
    //OSZI_A_HI();
-   if (aktualcommand & (1<<commandpos))
+   if (aktualcommand & (1<<commandpos)) // bit an pos commandpos: zB LO  0000001000000010
    {
      
       digitalWriteFast(CONTROL_PIN,HIGH);
@@ -489,10 +490,10 @@ void pakettimerfunction()
          bytepos = 0;
          //OSZI_A_HI();
          //OSZI_B_LO();
-         if (paketpos < paketmax - 1)
+         if (paketpos <  2*paketmax -1) //pakete, jedes wird doppelt gesendet
          {
             paketpos++; // jede Lok ein Paket
-            if (paketpos == paketmax - 1) // Paketserie fertig
+            if (paketpos == 2*paketmax - 1) // Paketserie fertig
             {
                //
                //OSZI_B_LO();
@@ -517,16 +518,7 @@ void pakettimerfunction()
    
 }
 
-void LCD_init(void)
-{
-   pinMode(LCD_RSDS_PIN, OUTPUT);
-   pinMode(LCD_ENABLE_PIN, OUTPUT);
-   pinMode(LCD_CLOCK_PIN, OUTPUT);
-   digitalWrite(LCD_RSDS_PIN,1);
-   digitalWrite(LCD_ENABLE_PIN,1);
-   digitalWrite(LCD_CLOCK_PIN,1);
 
-}
 
 void lcdputint3(uint16_t zahl)     // int bis 1000
 {
@@ -552,6 +544,7 @@ void lcdputint1(uint16_t zahl)     // int bis 1000
 
 void ADC_init(void) 
 {
+   
    emitter=0; // 
    
    adc->adc0->setAveraging(4); // set number of averages 
@@ -559,6 +552,7 @@ void ADC_init(void)
    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::LOW_SPEED);
    adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::MED_SPEED);
    adc->adc0->setReference(ADC_REFERENCE::REF_3V3);
+  
   // adc->adc0->enableInterrupts(ADC_0);
    
    
@@ -623,14 +617,14 @@ void setup()
    //stromTimer.begin(stromtimerfunction, 5000);
 
 
-   pinMode(5, OUTPUT);
-   digitalWrite(5,1);
+   //pinMode(5, OUTPUT);
+   //digitalWrite(5,1);
    pinMode(LOOPLED, OUTPUT);
    
    // FTM0   Pins: 5, 6, 9, 10, 20, 21, 22, 23
    // FTM1   3, 4   
    // FTM2   25, 32
-   analogWriteFrequency(5, 50);
+   //analogWriteFrequency(5, 50);
    // Serial.println(F("RawHID H0"));
  
    //pinMode(TAKT_PIN, OUTPUT);
@@ -648,8 +642,8 @@ void setup()
    digitalWriteFast(CONTROL_PIN, HIGH); // HI, OFF 
 
    
-   pinMode(LOKSYNC, OUTPUT);
-   digitalWriteFast(LOKSYNC, HIGH); 
+   //pinMode(LOKSYNC, OUTPUT);
+   //digitalWriteFast(LOKSYNC, HIGH); 
    
    pinMode(OSZI_PULS_A, OUTPUT);
    digitalWriteFast(OSZI_PULS_A, HIGH); 
@@ -658,9 +652,11 @@ void setup()
    
    //ghpinMode(SOURCECONTROL, INPUT);
    
-   LCD_init();
+   lcd.clear();
+   
    
    //                Configure the NRF24 module  | NRF24 modül konfigürasyonu
+   
    radio.begin();
    
    radio.openWritingPipe(pipeOut);
@@ -692,7 +688,10 @@ void setup()
    // radio.printDetails();
    
    ResetData();
-
+   
+   lcd.clear();
+   lcd.setCursor(15,0);
+   lcd.print("A");
    
    mcp0.begin();
    /*
@@ -703,7 +702,7 @@ void setup()
     */
 
    //mcp0.gpioPinMode(0x00FF); // A Ausgang, B Eingang
-
+   lcd.print("B");
    mcp0.gpioPinMode(0xFFFF); // alle input
    
    //mcp0.portPullup(0x00FF); 
@@ -711,10 +710,11 @@ void setup()
    
    mcp0.gpioPort(0xCC33);
 
-   
-   EEPROM.begin();
+   //lcd.print("C");
+   //EEPROM.begin();
     
-   delay(100);
+   _delay_ms(100);
+   
    usbtask = 0;
    adressearray[0] = LO;
    adressearray[1] = HI;
@@ -769,7 +769,7 @@ void setup()
    taskarray[0][8] = speedarray[3];
 
    // pause
-   taskarray[0][9] = 0;
+   taskarray[0][9] = 0; // 16 bit
    taskarray[0][10] = 0;
    taskarray[0][11] = 0;
    
@@ -846,8 +846,8 @@ void setup()
    taskarray[2][19] = taskarray[2][7];
    taskarray[2][20] = taskarray[2][8];
 
-   /*
-   for(uint8_t p = 3;p < 6;p++)
+   
+   for(uint8_t p = 3;p <ANZLOKS;p++)
    {
    taskarray[p][0] = adressearray[0];
    taskarray[p][1] = adressearray[1];
@@ -876,7 +876,7 @@ void setup()
    taskarray[p][20] = taskarray[p][8];
 
    }
-   */
+   
    /*
    commandarray0[0] = adressearray[0];
    commandarray0[1] = adressearray[1];
@@ -909,27 +909,34 @@ void setup()
    pinMode(POT_2_PIN, INPUT);
    pinMode(CURR_PIN, INPUT);
    
-   lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
-   _delay_ms(100);
-   lcd_puts("Teensy");
+   //lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
+   
+   //_delay_ms(100);
+   //lcd.print("D");
+   //lcd_puts("Teensy");
 
    
    ADC_init();
-   delay(100);
+
+   //delay(100);
    // Serial.print("setup: ");
    //  lcd.init();
     //  lcd.backlight();
     //  lcd.setCursor(0,0);
     //  lcd.print("H0-32");
+    
     _delay_ms(200);
+    //lcd.print("X");
     //  lcd.clear();  
+    /*
    uint8_t eepromtimerintervall = EEPROM.read(0xA0);
    if (eepromtimerintervall < 0xFF) // schon ein Wert gespeichert
    {
       timerintervall = eepromtimerintervall;
    }
-    //  lcd.setCursor(0,0);
-   //  lcd.print(timerintervall);
+   */
+      lcd.setCursor(0,0);
+     lcd.print(timerintervall);
     uint8_t eeprompos = 0x00;
     uint8_t eepromadressbyte = 0;
     /*
@@ -939,7 +946,7 @@ void setup()
     // Serial.print(" byte: ");
     // Serial.println(eepromadressbyte);
      // Serial.print("\n");
-*/
+      */
   
     taskarray[0][1] = tritarray[buffer[9]];
     taskarray[0][2] = tritarray[buffer[10]];
@@ -1076,14 +1083,14 @@ void setup()
            // Serial.println(eepromadressbyte);
 //  lcd.print(eepromadressbyte);
  */ 
-lcd.clear();
+//lcd.clear();
 
 }
 
 // Add loop code
 void loop()
 {
-#pragma mark mcp
+// pragma mark mcp
       
 
       
@@ -1206,7 +1213,7 @@ void loop()
       
       // Pot auslesen
       
-      for (uint8_t i=0;i<ANZLOKALLOKS-2;i++)
+      for (uint8_t i=0;i<4;i++) // lokal 4 kanaele
       {
          localpotarray[i] = adc->analogRead(potpinarray[i]); // 8 bit
          sendbuffer[16+i] = localpotarray[i];
@@ -1218,7 +1225,7 @@ void loop()
      
 
    
-#pragma mark EMITTER 
+// pragma mark EMITTER 
    if (sinceemitter > 200)
    {
       sinceemitter = 0;
@@ -1371,7 +1378,7 @@ void loop()
       }
    }
    
-#pragma mark blink 
+// pragma mark blink 
    if (sinceblink > 500)
    {
       if (sourcestatus & 0x01)
@@ -1508,7 +1515,7 @@ void loop()
       //lcd_puthex(tastenadresseB);
 
       lcd.setCursor(19, 1);  
-      lcd_putc('*');
+      lcd.print('*');
       lcd.setCursor(15, 0);
 
       if(sourcestatus == 2)
@@ -1575,7 +1582,7 @@ void loop()
 
       //lcd_putc(' ');
       //lcd_putint2(speed);
-      lcd_putc(' ');
+      //lcd_putc(' ');
    
       //lcd_putc(' ');
 
@@ -1588,15 +1595,15 @@ void loop()
       //Kanal B:
       
       lcd.setCursor(0,2);
-      lcd_puts("B ");
-      lcd_puthex(diptastenadresseB);
-      lcd_putc(' ');
+      lcd.print("B ");
+      lcd.print(diptastenadresseB,HEX);
+      lcd.println(' ');
       //lcd_hextobin(diptastenadresseB);
       //lcd_putc(' ');
-      lcd_putint(localpotarray[1]);
-      lcd_putc(' ');
-      lcd_putint2(taskarray[1][5]);
-      lcd_putc(' ');
+      lcd.print(localpotarray[1]);
+      lcd.print(' ');
+      lcd.print(taskarray[1][5]);
+      lcd.print(' ');
       
       lcd.setCursor(16,1);
       if(taskarray[1][4] == LO)
@@ -1699,7 +1706,7 @@ void loop()
 
 
    //loknummerTRITarray[0] = 3;
-   #pragma mark USB
+   // pragma mark USB
    int n;
    n = RawHID.recv(buffer, 10); // 
    if (n > 0) 
@@ -1758,7 +1765,7 @@ void loop()
       
      
      // // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
-      #pragma mark TASK 
+      // pragma mark TASK 
       if (sourcestatus & 0x02) // USB
       {
          usbadressearray[0] = buffer[8];
@@ -1815,7 +1822,7 @@ void loop()
                tastencounter++;
 
                
-               if(!weichenstatus & (1<<WEICHESTART))
+               if(!(weichenstatus & (1<<WEICHESTART)))
                {
                   weichenstatus |= (1<<WEICHESTART);
                   weichencounter = 0;
@@ -2762,12 +2769,12 @@ void loop()
       //// Serial.println("USB END");
    } // n>0
    
-#pragma mark local
+// pragma mark local
    else if (sourcestatus & 0x01)
    {
      // if (digitalReadFast(SOURCECONTROL) == 1)
-     
-      for (uint8_t localnum = 0;localnum < ANZLOKALLOKS;localnum++)
+     uint8_t localnum = 0;
+      for (localnum = 0;localnum < ANZLOKALLOKS;localnum++)
       {
          
          loknummer =localnum;
@@ -2878,7 +2885,7 @@ void loop()
             //           // Serial.print("\n");
             }
          } // speed_raw >= 2
-         localspeedarray[localnum] = speed;
+         //localspeedarray[5] = speed;
          
          
          // rep speed
@@ -3001,7 +3008,7 @@ void loop()
    } // local
    
 
-#pragma mark sincewegbuffer 
+// pragma mark sincewegbuffer 
    
    if ((sincewegbuffer > 1000))// && (usbtask == SET_WEG)) // naechster Schritt
    {
@@ -3046,7 +3053,7 @@ void loop()
        
    }   
 
-#pragma mark sinceringbuffer  
+// pragma mark sinceringbuffer  
    
    if ((sinceringbuffer > 32))// && (usbtask == SET_RING)) // naechster Schritt
    {
