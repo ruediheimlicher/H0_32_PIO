@@ -68,6 +68,9 @@
 #define CSN_PIN 23
 RF24 radio(CE_PIN, CSN_PIN);
 uint16_t errcounter = 0;
+uint16_t errcounterA = 0;
+uint16_t errcounterB = 0;
+uint16_t errcounterC = 0;
 uint16_t radiocounter = 0;
 const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter and Receiver code must be the same "0xABCDABCD71LL" | Verici ve Alıcı kodundaki adres aynı olmalıdır
 
@@ -130,7 +133,7 @@ ADC *adc = new ADC(); // adc object
 
 #define CURR_PIN A6
 
-#define ANZLOKS 4
+#define ANZLOKS 6
 
 #define ANZLOKALLOKS 4 // anz loks bei lokalem Betrieb
 #define ANZLOKALPOTS 4
@@ -511,9 +514,6 @@ void OSZI_C_TOGG(void)
 
 void pakettimerfunction()
 {
-   // OSZI_A_TOGG();
-   //OSZI_B_LO();
-
    /*
     commands
     LO     0x0202  // 0000001000000010
@@ -522,16 +522,16 @@ void pakettimerfunction()
     */
 
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command, 16 bit
-
+   errcounter++;
    if ((bytepos) == 0)
    {
+      errcounterA++;
       if (paketpos == 0) // syncsignal
       {
+         errcounterB++;
          looptask = IMPULSTASK;
          
          OSZI_A_LO(); // sync
-         //loopstatus &= ~(1<<PAUSEBIT);
-         //loopstatus |= (1<<WAITBIT);
          OSZI_B_HI();
       }
       if(paketpos == ANZLOKS)
@@ -558,41 +558,24 @@ void pakettimerfunction()
 
    if((paketpos == ANZLOKS) )
       {
-         
          {
             OSZI_B_LO();
-            //loopstatus |= (1<<PAUSEBIT);
-            //loopstatus &= ~(1<<WAITBIT);
-            //looptask = PAUSETASK;
          }
       }
    commandpos++;
    if (commandpos > 19)
    {
-
       commandpos = 0;
       OSZI_A_HI(); // sync, erster Impuls fertig generiert
 
       bytepos++;
-      /*
-      if((paketpos == ANZLOKS) )
-      {
-         
-         {
-            OSZI_B_LO();
-            //loopstatus |= (1<<PAUSEBIT);
-         }
-      }
-      */
       if (bytepos >= 20 + pause) // Paket fertig
       {
          bytepos = 0;
-
-         paketpos++;                   // jede Lok ein Paket
-         if (paketpos == paketmax - 1) // Paketserie fertig
+         paketpos += 1;                  // jede Lok ein Paket
+         if (paketpos >= paketmax - 1) // Paketserie fertig
          {
             paketpos = 0;
-            
          }
       }
    }
@@ -1185,17 +1168,12 @@ void setup()
               // Serial.println(eepromadressbyte);
    //  lcd.print(eepromadressbyte);
     */
-   // lcd.clear();
-   lcd.setCursor(18, 0);
-   lcd.print("X");
-   lcd.setCursor(18, 0);
-   lcd.print("X");
+    lcd.clear();
+   
    //paketTimer.begin(pakettimerfunction, timerintervall);
-   lcd.setCursor(18, 0);
-   lcd.print("X");
+   
    //paketTimer.priority(0);
-   lcd.setCursor(18, 0);
-   lcd.print("X");
+   
    loopstatus |= (1<<WAITBIT);
    looptask = IMPULSTASK;
 }
@@ -1207,7 +1185,7 @@ void loop()
    if (loopstatus & (1<<FIRSTRUN))
    {
       firstruncounter++;
-      if (firstruncounter > 180)
+      if (firstruncounter > 1)
       {
          paketTimer.begin(pakettimerfunction, timerintervall);
 
@@ -1222,10 +1200,12 @@ void loop()
    //if((loopstatus & (1<<PAUSEBIT)) && !(loopstatus & (1<<WAITBIT)))
    if(looptask == PAUSETASK)
    {
+      
+      //looptask == IMPULSTASK;
       OSZI_C_LO();
 
-      
       // digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
+      /*
       if (radio.write(&data, sizeof(data)))
       {
          radiocounter++;
@@ -1261,6 +1241,7 @@ void loop()
          else
          {
          }
+         
          // ********************
          // ********************
       }
@@ -1268,9 +1249,10 @@ void loop()
       {
          // Serial.println("radio error\n");
          digitalWrite(BUZZPIN, !(digitalRead(BUZZPIN)));
-         errcounter++;
+         //errcounter++;
       }
-      
+      */
+     
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
@@ -1509,14 +1491,21 @@ void loop()
             sendbuffer[16 + i] = localpotarray[i];
          }
       }
-      //OSZI_A_HI();
       OSZI_C_HI();
       //loopstatus &= ~(1<<PAUSEBIT);
       //loopstatus |= (1<<WAITBIT);
       looptask = IMPULSTASK;
-   }  // if (sincemcp )
 
+   }  // if (sincemcp )
+      lcd.setCursor(15, 0);
+      lcd.print(" ");
+     lcd.setCursor(16, 0);
+      lcd.print("I");
+   
+ 
    // #pragma mark EMITTER
+   
+   //sinceemitter = 0;
    if (sinceemitter > 200)
    {
       sinceemitter = 0;
@@ -1634,13 +1623,28 @@ void loop()
          weichenstatus &= ~(1 << WEICHESTART);
       }
    }
-   //sinceblink = 0;
-   if (sinceblink > 500)
+
+   sinceblink = 0;
+   if (sinceblink > 20)
    {
       //OSZI_C_TOGG();
       // mcp2.gpioDigitalWrite(15,0); //
       if (sourcestatus & 0x01)
       {
+         
+         lcd.setCursor(0, 1);
+         lcd.print(errcounter);
+         lcd.setCursor(4, 1);
+         lcd.print(errcounterA);
+         lcd.setCursor(8, 1);
+         lcd.print(errcounterB);
+         lcd.setCursor(12, 1);
+         lcd.print(paketpos);
+         lcd.setCursor(14, 1);
+         lcd.print(bytepos);
+         lcd.print("*");
+
+         /*
          lcd.setCursor(0, 1);
          lcdputint3(lokaladressearray[0]);
          lcd.setCursor(4, 1);
@@ -1649,6 +1653,7 @@ void loop()
          lcdputint3(lokaladressearray[2]);
          lcd.setCursor(12, 1);
          lcdputint3(lokaladressearray[3]);
+         */
         // uint8_t doubleadress = checkDoubleAddress();
          lcd.setCursor(0, 3);
          lcd.print(tastencodeA, HEX);
