@@ -527,7 +527,7 @@ void pakettimerfunction()
    {
       if (paketpos == 0) // syncsignal
       {
-         
+         looptask = IMPULSTASK;
          
          OSZI_A_LO(); // sync
          //loopstatus &= ~(1<<PAUSEBIT);
@@ -561,8 +561,8 @@ void pakettimerfunction()
          
          {
             OSZI_B_LO();
-            loopstatus |= (1<<PAUSEBIT);
-            loopstatus &= ~(1<<WAITBIT);
+            //loopstatus |= (1<<PAUSEBIT);
+            //loopstatus &= ~(1<<WAITBIT);
             //looptask = PAUSETASK;
          }
       }
@@ -580,7 +580,7 @@ void pakettimerfunction()
          
          {
             OSZI_B_LO();
-            loopstatus |= (1<<PAUSEBIT);
+            //loopstatus |= (1<<PAUSEBIT);
          }
       }
       */
@@ -1509,8 +1509,8 @@ void loop()
       }
       //OSZI_A_HI();
       OSZI_C_HI();
-      loopstatus &= ~(1<<PAUSEBIT);
-      loopstatus |= (1<<WAITBIT);
+      //loopstatus &= ~(1<<PAUSEBIT);
+      //loopstatus |= (1<<WAITBIT);
       looptask = IMPULSTASK;
    }  // if (sincemcp )
 
