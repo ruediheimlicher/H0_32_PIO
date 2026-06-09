@@ -1190,10 +1190,10 @@ void setup()
    lcd.print("X");
    lcd.setCursor(18, 0);
    lcd.print("X");
-   paketTimer.begin(pakettimerfunction, timerintervall);
+   //paketTimer.begin(pakettimerfunction, timerintervall);
    lcd.setCursor(18, 0);
    lcd.print("X");
-   paketTimer.priority(0);
+   //paketTimer.priority(0);
    lcd.setCursor(18, 0);
    lcd.print("X");
    loopstatus |= (1<<WAITBIT);
@@ -1204,25 +1204,27 @@ void setup()
 void loop()
 {
    // #pragma mark mcp
+   if (loopstatus & (1<<FIRSTRUN))
+   {
+      firstruncounter++;
+      if (firstruncounter > 180)
+      {
+         paketTimer.begin(pakettimerfunction, timerintervall);
 
+         lcd.setCursor(18, 0);
+         lcd.print("X");
+         paketTimer.priority(0);
+         loopstatus &= ~(1<<FIRSTRUN);
+      }
+   }
+   
    //if (sincemcp > 10)
    //if((loopstatus & (1<<PAUSEBIT)) && !(loopstatus & (1<<WAITBIT)))
    if(looptask == PAUSETASK)
    {
       OSZI_C_LO();
 
-      if (firstruncounter < 10)
-      {
-         firstruncounter++;
-         if (firstruncounter > 8)
-         {
-            //paketTimer.begin(pakettimerfunction, timerintervall);
-
-            //lcd.setCursor(18, 0);
-            //lcd.print("X");
-            //paketTimer.priority(0);
-         }
-      }
+      
       // digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
       if (radio.write(&data, sizeof(data)))
       {
