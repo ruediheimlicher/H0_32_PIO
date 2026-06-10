@@ -27,7 +27,6 @@
 
 #include "main.h"
 #include "defines.h"
-// #include <stdint.h>
 #include <ADC.h>
 #include <ADC_util.h>
 
@@ -133,12 +132,12 @@ ADC *adc = new ADC(); // adc object
 
 #define CURR_PIN A6
 
-#define ANZLOKS 6
+#define ANZLOKS 8
 
-#define ANZLOKALLOKS 4 // anz loks bei lokalem Betrieb
+#define ANZLOKALLOKS 8 // anz loks bei lokalem Betrieb
 #define ANZLOKALPOTS 4
 
-#define IMPULSTASK   1
+#define IMPULSTASK 1
 #define PAUSETASK 2
 
 #define POT_0_PIN A0
@@ -150,7 +149,6 @@ ADC *adc = new ADC(); // adc object
 
 #define OSZI_PULS_A 8
 #define OSZI_PULS_B 9
-
 #define OSZI_PULS_C 2
 
 volatile uint8_t loopstatus = 0;
@@ -159,8 +157,8 @@ volatile uint8_t sourcestatus = 1; // local/USB
 #define LOCAL 0
 #define USB 1
 #define FIRSTRUN 1
-#define PAUSEBIT     2 // Pause zwischen Datenserie
-#define WAITBIT      3
+#define PAUSEBIT 2 // Pause zwischen Datenserie
+#define WAITBIT 3
 
 #define SERIAL_OK 2
 
@@ -184,7 +182,7 @@ volatile uint16_t taskarray[8][32] = {0};
 
 volatile uint16_t adressearray[4];
 volatile uint16_t eepromadressearray[8][4];
-volatile uint16_t speedarray[5];
+volatile uint16_t speedarray[4];
 
 volatile uint16_t loknummerTRITarray[4] = {0};
 volatile uint8_t loknummer = 0;
@@ -522,24 +520,24 @@ void pakettimerfunction()
     */
 
    aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command, 16 bit
-   errcounter++;
+                                                 // errcounter++;
+OSZI_C_TOGG();
    if ((bytepos) == 0)
    {
-      errcounterA++;
+      // errcounter++; // 140
       if (paketpos == 0) // syncsignal
       {
-         errcounterB++;
+         // errcounter++; // 20
          looptask = IMPULSTASK;
-         
          OSZI_A_LO(); // sync
          OSZI_B_HI();
       }
-      if(paketpos == ANZLOKS)
+      if (paketpos == ANZLOKS)
       {
-            looptask = PAUSETASK;
+         looptask = PAUSETASK;
       }
 
-      if (paketpos == ANZLOKALLOKS - 1) // Weiche
+      if (paketpos == ANZLOKS - 1) // Weiche
       {
          // weichebyte6 = taskarray[paketpos][2];
          // weichebyte7 = taskarray[paketpos][3];
@@ -556,30 +554,29 @@ void pakettimerfunction()
       digitalWriteFast(CONTROL_PIN, LOW);
    }
 
-   if((paketpos == ANZLOKS) )
-      {
-         {
-            OSZI_B_LO();
-         }
-      }
+   if ((paketpos == ANZLOKS))
+   {
+      OSZI_B_LO();
+   }
    commandpos++;
    if (commandpos > 19)
    {
       commandpos = 0;
       OSZI_A_HI(); // sync, erster Impuls fertig generiert
-
+      errcounter++;
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
       {
+         errcounterB++;
          bytepos = 0;
-         paketpos += 1;                  // jede Lok ein Paket
+         paketpos += 1;
+         // jede Lok ein Paket
          if (paketpos >= paketmax - 1) // Paketserie fertig
          {
             paketpos = 0;
          }
       }
    }
-   
 }
 
 /*
@@ -633,9 +630,9 @@ void ADC_init(void)
 void loadtaskarray(uint8_t pos)
 {
    volatile uint16_t aa[4];
-   aa[0] = OPEN;
-   aa[1] = OPEN;
-   aa[2] = OPEN;
+   aa[0] = LO;
+   aa[1] = LO;
+   aa[2] = HI;
    aa[3] = OPEN;
    taskarray[pos][0] = aa[0];
    taskarray[pos][1] = aa[1];
@@ -662,6 +659,13 @@ void loadtaskarray(uint8_t pos)
    taskarray[pos][18] = taskarray[pos][6];
    taskarray[pos][19] = taskarray[pos][7];
    taskarray[pos][20] = taskarray[pos][8];
+
+   taskarray[pos][21] = 0;
+   taskarray[pos][22] = 0;
+   taskarray[pos][23] = 0;
+
+
+
 }
 
 uint8_t checkDoubleAddress(void)
@@ -701,7 +705,7 @@ void setup()
    delay(100);
 
    lcd.home(); // go home
-   //lcd.print("H032 ESP");
+   // lcd.print("H032 ESP");
 
    loopstatus |= (1 << FIRSTRUN); // Bit fuer tasks in erster Runde
    delay(100);
@@ -986,11 +990,10 @@ void setup()
       taskarray[2][19] = taskarray[2][7];
       taskarray[2][20] = taskarray[2][8];
    */
-   for (uint8_t p = 0; p < ANZLOKS; p++)
+   for (uint8_t p = 0; p < 8; p++)
    {
       loadtaskarray(p);
    }
-   // loadtaskarray(5);
 
    aktualcommand = OPEN;
 
@@ -1168,13 +1171,14 @@ void setup()
               // Serial.println(eepromadressbyte);
    //  lcd.print(eepromadressbyte);
     */
-    lcd.clear();
-   
-   //paketTimer.begin(pakettimerfunction, timerintervall);
-   
-   //paketTimer.priority(0);
-   
-   loopstatus |= (1<<WAITBIT);
+   lcd.clear();
+   lcd.setCursor(19, 1);
+   lcd.print("X");
+   paketTimer.begin(pakettimerfunction, timerintervall);
+
+   paketTimer.priority(0);
+
+   loopstatus |= (1 << WAITBIT);
    looptask = IMPULSTASK;
 }
 
@@ -1182,30 +1186,41 @@ void setup()
 void loop()
 {
    // #pragma mark mcp
-   if (loopstatus & (1<<FIRSTRUN))
+   if (loopstatus & (1 << FIRSTRUN))
    {
-      firstruncounter++;
-      if (firstruncounter > 1)
+
+      // firstruncounter++;
+      /*
+      if (firstruncounter > 10)
       {
-         paketTimer.begin(pakettimerfunction, timerintervall);
+         //paketTimer.begin(pakettimerfunction, timerintervall);
 
          lcd.setCursor(18, 0);
          lcd.print("X");
-         paketTimer.priority(0);
-         loopstatus &= ~(1<<FIRSTRUN);
+         //paketTimer.priority(0);
+         loopstatus &= ~(1 << FIRSTRUN);
+         lcd.setCursor(18, 0);
+         lcd.setCursor(18, 0);
+
+         lcd.print("F");
+         //errcounter++;
       }
+      */
    }
    
-   //if (sincemcp > 10)
-   //if((loopstatus & (1<<PAUSEBIT)) && !(loopstatus & (1<<WAITBIT)))
-   if(looptask == PAUSETASK)
+   // if (sincemcp > 10)
+   // if((loopstatus & (1<<PAUSEBIT)) && !(loopstatus & (1<<WAITBIT)))
+   if (looptask == PAUSETASK)
    {
-      
-      //looptask == IMPULSTASK;
-      OSZI_C_LO();
+      // errcounter++;
+
+      lcd.setCursor(17, 0);
+      lcd.print("P");
+
+                                 //OSZI_C_LO();
 
       // digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
-      /*
+
       if (radio.write(&data, sizeof(data)))
       {
          radiocounter++;
@@ -1215,7 +1230,7 @@ void loop()
 
          if (radio.isAckPayloadAvailable())
          {
-            
+
             radio.read(&ackData, sizeof(ackData));
             radio.flush_rx();
 
@@ -1240,8 +1255,9 @@ void loop()
          }
          else
          {
+            // errcounter++;
          }
-         
+
          // ********************
          // ********************
       }
@@ -1249,13 +1265,13 @@ void loop()
       {
          // Serial.println("radio error\n");
          digitalWrite(BUZZPIN, !(digitalRead(BUZZPIN)));
-         //errcounter++;
+         // errcounter++;
       }
-      */
-     
+
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
+      lcd.setCursor(0, 2);
 
       // bit 4-7: Adresse lesen: SPI MCP23S17
       tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
@@ -1282,9 +1298,8 @@ void loop()
             diptastenadresseA |= (1 << (2 * i + 1));
          }
       }
-      
-      tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
 
+      tastencodeB = 0xFF - mcp0.gpioReadPortB(); // active taste ist LO > invertieren
       tastenadresseB = (tastencodeB & 0xF0) >> 4;
 
       // 240702: Tastencode invertieren, > DIP-code wird analog Trafo und H0-Interface
@@ -1312,9 +1327,9 @@ void loop()
       }
 
       tastenstatusA |= tastencodeB;
-     
+
       // Weichen
-      
+
       weichenposition[GRUPPE_0] = 0;
 
       weichendata w; // data in ringbuffer
@@ -1482,8 +1497,8 @@ void loop()
       } //
 
       // Pot auslesen
-      
-      for (uint8_t i = 0; i < ANZLOKALLOKS - 2; i++) // lokal 2 kanaele
+
+      for (uint8_t i = 0; i < ANZLOKALPOTS - 2; i++) // lokal 2 kanaele
       {
          if (i < 2) // teensy4, nur 4 can
          {
@@ -1491,21 +1506,27 @@ void loop()
             sendbuffer[16 + i] = localpotarray[i];
          }
       }
-      OSZI_C_HI();
-      //loopstatus &= ~(1<<PAUSEBIT);
-      //loopstatus |= (1<<WAITBIT);
+      lcd.print('w');
+      // errcounterA++;
+                                          //OSZI_C_HI();
+      // loopstatus &= ~(1<<PAUSEBIT);
+      // loopstatus |= (1<<WAITBIT);
       looptask = IMPULSTASK;
+      /*
+      lcd.setCursor(18, 0);
+      lcd.print("L");
 
-   }  // if (sincemcp )
       lcd.setCursor(15, 0);
       lcd.print(" ");
-     lcd.setCursor(16, 0);
+      lcd.setCursor(16, 0);
       lcd.print("I");
-   
- 
+      */
+   } // if (sincemcp )
+
    // #pragma mark EMITTER
-   
-   //sinceemitter = 0;
+
+   // sinceemitter = 0;
+   // errcounter++;
    if (sinceemitter > 200)
    {
       sinceemitter = 0;
@@ -1586,7 +1607,7 @@ void loop()
        */
 
    } // if sinceemitter
-
+   // errcounter++;
    /*
    if((sinceweiche > 2) && (weichenstatus & (1<<WEICHESTART)))
    {
@@ -1623,26 +1644,30 @@ void loop()
          weichenstatus &= ~(1 << WEICHESTART);
       }
    }
-
-   sinceblink = 0;
-   if (sinceblink > 20)
+   // errcounter++;
+   // sinceblink = 0;
+   if (sinceblink > 100)
    {
-      //OSZI_C_TOGG();
-      // mcp2.gpioDigitalWrite(15,0); //
+      // OSZI_C_TOGG();
+      //  mcp2.gpioDigitalWrite(15,0); //
       if (sourcestatus & 0x01)
       {
-         
+         // errcounter++;
          lcd.setCursor(0, 1);
-         lcd.print(errcounter);
-         lcd.setCursor(4, 1);
+         // lcd.print(errcounter);
+         lcd.setCursor(6, 1);
          lcd.print(errcounterA);
          lcd.setCursor(8, 1);
          lcd.print(errcounterB);
-         lcd.setCursor(12, 1);
+         // errcounter++;
+         lcd.setCursor(8, 3);
          lcd.print(paketpos);
-         lcd.setCursor(14, 1);
+         lcd.setCursor(12, 3);
+         lcd.print("*");
          lcd.print(bytepos);
          lcd.print("*");
+
+         // errcounter++;
 
          /*
          lcd.setCursor(0, 1);
@@ -1654,7 +1679,9 @@ void loop()
          lcd.setCursor(12, 1);
          lcdputint3(lokaladressearray[3]);
          */
-        // uint8_t doubleadress = checkDoubleAddress();
+         // uint8_t doubleadress = checkDoubleAddress();
+
+         /*
          lcd.setCursor(0, 3);
          lcd.print(tastencodeA, HEX);
          lcd.setCursor(3, 3);
@@ -1668,6 +1695,7 @@ void loop()
          lcd.print((weichentastencodeE), HEX);
          lcd.setCursor(15, 3);
          lcd.print((weichentastencodeF), HEX);
+         */
 
          // mcp2.gpioDigitalWrite(15,1); //
          // lcd.print(weichentastenstatusD, HEX);
@@ -1705,6 +1733,7 @@ void loop()
          lcd.setCursor(14,3);
          lcd.print(doubleadress);
          */
+
          lcd.setCursor(0, 0);
          lcdputint3(localpotarray[0]);
          lcd.setCursor(4, 0);
@@ -1713,6 +1742,7 @@ void loop()
          lcdputint3(localpotarray[2]); // von nRF pot 2
          lcd.setCursor(12, 0);
          lcdputint3(localpotarray[3]); // von nRF pot 3
+         // errcounter++;
       }
       else if (sourcestatus & 0x02)
       {
@@ -1752,7 +1782,7 @@ void loop()
       lcd.setCursor(19, 0);
       lcd.print(char('A' + asciicounter));
       asciicounter++;
-      asciicounter &= 0x1f;
+      asciicounter &= 0x1A;
       data.A = asciicounter;
 
       /*
@@ -1848,12 +1878,14 @@ void loop()
       {
          speed = 0;
       }
-
+      // errcounter++;
+      lcd.setCursor(0, 1);
+      lcd.print(errcounter);
    } // if sincblinkk 500
 
    // loknummerTRITarray[0] = 3;
    //  #pragma mark USB
-   int n;
+   int n = 0;
    n = RawHID.recv(buffer, 10); //
    if (n > 0)
    {
@@ -2791,13 +2823,16 @@ void loop()
 
       } // if localstatus & 0x02
       //// Serial.println("USB END");
+
    } // n>0
 
    // #pragma mark local
+
    else if (sourcestatus & 0x01) // local
    {
-
-      // Weichen
+      // errcounter++;
+      // errcounter++;
+      //  Weichen
 
       /*
       pin mode:
@@ -3123,6 +3158,7 @@ void loop()
    }
 
    // every 4 seconds, send a packet to the computer
+
    if (msUntilNextSend > 4000)
    {
       msUntilNextSend = msUntilNextSend - 2000;
