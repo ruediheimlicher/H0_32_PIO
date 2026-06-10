@@ -519,9 +519,9 @@ void pakettimerfunction()
     HI     0xFEFE  // 1111111011111110
     */
 
-   aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command, 16 bit
+   aktualcommand = (paketpos < ANZLOKS) ? taskarray[paketpos][bytepos] : 0; // zu schickendes command, 16 bit; während Pause (paketpos >= ANZLOKS) keinen OOB-Read
                                                  // errcounter++;
-OSZI_C_TOGG();
+   //OSZI_C_TOGG();
    if ((bytepos) == 0)
    {
       // errcounter++; // 140
@@ -833,7 +833,7 @@ void setup()
    hex: 6C6C
 
    */
-   /*
+   
    mcp1.begin(0);
    lcd.setCursor(18,0);
    lcd.print("e");
@@ -853,7 +853,7 @@ void setup()
    mcp2.gpioPinMode(0x6C6C);// A7 output, A6,A5 input
    mcp2.gpioPort(0xFFFF); // alle HI
 
-   */
+   
    EEPROM.begin();
    lcd.setCursor(18, 0);
    lcd.print("h");
@@ -1212,12 +1212,9 @@ void loop()
    // if((loopstatus & (1<<PAUSEBIT)) && !(loopstatus & (1<<WAITBIT)))
    if (looptask == PAUSETASK)
    {
-      // errcounter++;
+     
 
-      lcd.setCursor(17, 0);
-      lcd.print("P");
-
-                                 //OSZI_C_LO();
+      OSZI_C_LO();
 
       // digitalWriteFast(SPI_SR_CS, !digitalReadFast(SPI_SR_CS)); // CS aktivieren
 
@@ -1271,7 +1268,7 @@ void loop()
       sincemcp = 0;
       // bit 0: Funktion
       // bit 1: Richtungsimpuls
-      lcd.setCursor(0, 2);
+      
 
       // bit 4-7: Adresse lesen: SPI MCP23S17
       tastencodeA = 0xFF - mcp0.gpioReadPortA(); // active taste ist LO > invertieren
@@ -1413,8 +1410,6 @@ void loop()
 
       } // if(weichentastencodeD ^
 
-      // mcp2
-      //_delay_us(2);
       weichentastencodeE = mcp2.gpioReadPortA(); //& 0x7F;
 
       weichenxor2 = weichentastencodeE ^ oldweichentastencodeE;
@@ -1454,7 +1449,6 @@ void loop()
          oldweichentastencodeE = weichentastencodeE;
       } // if(weichentastencodeDE ^
 
-      //_delay_us(2);
 
       weichentastencodeF = mcp2.gpioReadPortB(); //& 0x7F;
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
@@ -1506,27 +1500,17 @@ void loop()
             sendbuffer[16 + i] = localpotarray[i];
          }
       }
-      lcd.print('w');
-      // errcounterA++;
-                                          //OSZI_C_HI();
-      // loopstatus &= ~(1<<PAUSEBIT);
-      // loopstatus |= (1<<WAITBIT);
-      looptask = IMPULSTASK;
-      /*
-      lcd.setCursor(18, 0);
-      lcd.print("L");
+      
+     
+      OSZI_C_HI();
 
-      lcd.setCursor(15, 0);
-      lcd.print(" ");
-      lcd.setCursor(16, 0);
-      lcd.print("I");
-      */
+      looptask = IMPULSTASK;
+     
    } // if (sincemcp )
 
    // #pragma mark EMITTER
 
    // sinceemitter = 0;
-   // errcounter++;
    if (sinceemitter > 200)
    {
       sinceemitter = 0;
@@ -1646,30 +1630,17 @@ void loop()
    }
    // errcounter++;
    // sinceblink = 0;
-   if (sinceblink > 100)
+   if (sinceblink > 500)
    {
       // OSZI_C_TOGG();
       //  mcp2.gpioDigitalWrite(15,0); //
       if (sourcestatus & 0x01)
       {
-         // errcounter++;
-         lcd.setCursor(0, 1);
-         // lcd.print(errcounter);
-         lcd.setCursor(6, 1);
-         lcd.print(errcounterA);
-         lcd.setCursor(8, 1);
-         lcd.print(errcounterB);
-         // errcounter++;
-         lcd.setCursor(8, 3);
-         lcd.print(paketpos);
-         lcd.setCursor(12, 3);
-         lcd.print("*");
-         lcd.print(bytepos);
-         lcd.print("*");
+ 
 
          // errcounter++;
 
-         /*
+         
          lcd.setCursor(0, 1);
          lcdputint3(lokaladressearray[0]);
          lcd.setCursor(4, 1);
@@ -1678,10 +1649,10 @@ void loop()
          lcdputint3(lokaladressearray[2]);
          lcd.setCursor(12, 1);
          lcdputint3(lokaladressearray[3]);
-         */
+         
          // uint8_t doubleadress = checkDoubleAddress();
 
-         /*
+         
          lcd.setCursor(0, 3);
          lcd.print(tastencodeA, HEX);
          lcd.setCursor(3, 3);
@@ -1695,7 +1666,7 @@ void loop()
          lcd.print((weichentastencodeE), HEX);
          lcd.setCursor(15, 3);
          lcd.print((weichentastencodeF), HEX);
-         */
+         
 
          // mcp2.gpioDigitalWrite(15,1); //
          // lcd.print(weichentastenstatusD, HEX);
@@ -1841,8 +1812,7 @@ void loop()
       // pinMode(LOOPLED, OUTPUT);
       digitalWriteFast(LOOPLED, !digitalReadFast(LOOPLED));
 
-      lcd.setCursor(19, 1);
-      lcd.setCursor(15, 0);
+    
 
       if (sourcestatus == 2)
       {
@@ -1879,8 +1849,7 @@ void loop()
          speed = 0;
       }
       // errcounter++;
-      lcd.setCursor(0, 1);
-      lcd.print(errcounter);
+      
    } // if sincblinkk 500
 
    // loknummerTRITarray[0] = 3;
