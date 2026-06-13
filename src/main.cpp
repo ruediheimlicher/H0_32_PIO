@@ -132,7 +132,7 @@ ADC *adc = new ADC(); // adc object
 
 #define CURR_PIN A6
 
-#define ANZLOKS 8
+#define ANZLOKS 6
 
 #define ANZLOKALLOKS 8 // anz loks bei lokalem Betrieb
 #define ANZLOKALPOTS 4
@@ -224,10 +224,10 @@ float sinpos = 0;
 gpio_MCP23S17 mcp0(SPI_MCP_CS, 0x20); // instance 0 (address A0,A1,A2 tied to 0)
 
 // Weichen A
-gpio_MCP23S17 mcp1(SPI_SR_CS, 0x21); // instance 0 (address A0=1, A1 = A2 = 0)
+gpio_MCP23S17 mcp1(SPI_SR_CS, 0x21); // instance 1 (address A0=1, A1 = A2 = 0)
 
 // Weichen B
-gpio_MCP23S17 mcp2(SPI_SR_CS, 0x22); // instance 0 (address A0=1, A1 = A2 = 0)
+gpio_MCP23S17 mcp2(SPI_SR_CS, 0x22); // instance 2 (address A0=0, A1 = 1, A2 = 0)
 
 uint8_t regA = 0x0;
 uint8_t regB = 0;
