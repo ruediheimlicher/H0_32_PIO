@@ -745,7 +745,7 @@ void setup()
    {
       radio.failureDetected = false;
       delay(250);
-      lcd.setCursor(19, 0);
+      lcd.setCursor(19,0);
       lcd.println("-");
    }
    else
@@ -1699,7 +1699,7 @@ void loop()
       {
          mcp1.gpioDigitalWrite(0, 0); //
       }
-      lcd.setCursor(19, 0);
+      lcd.setCursor(19,0);
       lcd.print(char('A' + asciicounter));
       asciicounter++;
       asciicounter &= 0x1f;
