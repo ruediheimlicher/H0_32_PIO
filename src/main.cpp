@@ -845,11 +845,11 @@ void setup()
   // ***********************************
    // mcp2
    // ***********************************
-    lcd.setCursor(18,0);
-   lcd.print("f");
+   // lcd.setCursor(18,0);
+   //lcd.print("f");
    mcp2.begin(0);
-    lcd.setCursor(18,0);
-   lcd.print("g");
+   // lcd.setCursor(18,0);
+   //lcd.print("g");
    mcp2.gpioPinMode(0x6C6C);// A7 output, A6,A5 input
    mcp2.gpioPort(0xFFFF); // alle HI
 
