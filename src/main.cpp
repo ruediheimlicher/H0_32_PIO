@@ -1751,9 +1751,9 @@ void loop()
          mcp1.gpioDigitalWrite(0, 0); //
       }
       lcd.setCursor(19, 0);
-      lcd.print(char('A' + asciicounter));
+      lcd.print(char(65 + asciicounter));
       asciicounter++;
-      asciicounter &= 0x1A;
+      asciicounter &= 0x0F;
       data.A = asciicounter;
 
       /*
