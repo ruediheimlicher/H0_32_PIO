@@ -887,20 +887,26 @@ void setup()
       GPB7	15
   */
    
-   #define PIN_MODE 0xCCCC
-   #define SET_A_A  6
-   #define SET_A_B  3
-   #define SET_A_C  7
-   #define SET_A_D  2
-   #define OUT_A_A  5
-   #define OUT_A_B  4
+   #define PIN_MODE 0x3333 // vorher 0xCCCC
 
-   #define SET_B_A  14
-   #define SET_B_B  11
-   #define SET_B_C  15
-   #define SET_B_D  10
-   #define OUT_B_A  13
-   #define OUT_B_B  12
+
+   #define SET_A_A  6   // 1
+   #define SET_A_B  3   // 1
+   #define OUT_A_A  5   // 0
+
+   #define SET_A_C  7   // 1
+   #define SET_A_D  2   // 1
+   #define OUT_A_B  4   // 0
+
+   #define SET_B_A  14   // 1
+   #define SET_B_B  11   // 1
+   #define OUT_B_A  13   // 0
+
+   #define SET_B_C  15   // 1
+   #define SET_B_D  10   // 1
+   #define OUT_B_B  12   // 0
+
+
 
    mcp1.begin(0);
    lcd.setCursor(18,0);
@@ -918,7 +924,7 @@ void setup()
     lcd.setCursor(18,0);
    lcd.print("f");
    mcp2.begin(0);
-    lcd.setCursor(18,0);
+   lcd.setCursor(18,0);
    lcd.print("g");
    mcp2.gpioPinMode(PIN_MODE);// A7 output, A6,A5 input
    mcp2.gpioPort(0xFFFF); // alle HI
@@ -1351,7 +1357,7 @@ void loop()
 
          if ((weichentastencodeD & (1 << SET_B_B)) == 0) // Taste 5 gedrueckt
          {
-            mcp1.gpioDigitalWrite(OUT_B_A, 1); //
+            mcp1.gpioDigitalWrite(OUT_B_B, 1); //
             w = {.weiche = 2, .richtung = 1};
             rb_push(&weichenringbuffer, w);
          }
@@ -1381,33 +1387,33 @@ void loop()
       if (weichenxor2) // neue Daten
       {
 
-         
+         weichenXORcounterA++;
          // Weiche E Position 4
-         if ((weichentastencodeE & (1 << 6)) == 0) // Taste 3 gedrueckt
+         if ((weichentastencodeE & (1 << SET_A_A)) == 0) // Taste 3 gedrueckt
          {
-            mcp2.gpioDigitalWrite(15, 0); //
+            mcp2.gpioDigitalWrite(OUT_A_A, 0); //
             w = {.weiche = 4, .richtung = 0};
             rb_push(&weichenringbuffer, w);
          }
 
-         if ((weichentastencodeE & (1 << 5)) == 0) // Taste 2 gedrueckt
+         if ((weichentastencodeE & (1 << SET_A_B)) == 0) // Taste 2 gedrueckt
          {
-            mcp2.gpioDigitalWrite(15, 1); //
+            mcp2.gpioDigitalWrite(OUT_B_A, 1); //
             w = {.weiche = 4, .richtung = 1};
             rb_push(&weichenringbuffer, w);
          }
 
          // Weiche F Position 5
-         if ((weichentastencodeE & (1 << 3)) == 0) // Taste 3 gedrueckt , weiche1
+         if ((weichentastencodeE & (1 << SET_A_C)) == 0) // Taste 3 gedrueckt , weiche1
          {
-            mcp2.gpioDigitalWrite(12, 0); // GPA7
+            mcp2.gpioDigitalWrite(OUT_A_B, 0); // GPA7
             w = {.weiche = 5, .richtung = 0};
             rb_push(&weichenringbuffer, w);
          }
 
-         if ((weichentastencodeE & (1 << 2)) == 0) // Taste 2 gedrueckt weiche1
+         if ((weichentastencodeE & (1 << SET_A_D)) == 0) // Taste 2 gedrueckt weiche1
          {
-            mcp2.gpioDigitalWrite(12, 1); //
+            mcp2.gpioDigitalWrite(OUT_A_B, 1); //
             w = {.weiche = 5, .richtung = 1};
             rb_push(&weichenringbuffer, w);
          }
@@ -1420,35 +1426,35 @@ void loop()
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
       if (weichenxor3) // neue Daten
       {
-         
-         if ((weichentastencodeF & (1 << 6)) == 0) // Taste 6 gedrueckt
+         weichenXORcounterB++;
+         if ((weichentastencodeF & (1 << SET_B_A)) == 0) // Taste 6 gedrueckt
          {
             
-            mcp2.gpioDigitalWrite(7, 0); //
+            mcp2.gpioDigitalWrite(OUT_B_A, 0); //
             weichenposition[GRUPPE_0] &= ~(1 << 2);
             w = {.weiche = 6, .richtung = 0};
             rb_push(&weichenringbuffer, w);
          }
 
-         if ((weichentastencodeF & (1 << 5)) == 0) // Taste 5 gedrueckt
+         if ((weichentastencodeF & (1 << SET_B_B)) == 0) // Taste 5 gedrueckt
          {
-            mcp2.gpioDigitalWrite(7, 1); //
+            mcp2.gpioDigitalWrite(OUT_B_B, 1); //
             weichenposition[GRUPPE_0] |= (1 << 2);
             w = {.weiche = 6, .richtung = 1};
             rb_push(&weichenringbuffer, w);
          }
          // Weiche F Position 1
-         if ((weichentastencodeF & (1 << 3)) == 0) // Taste 3 gedrueckt , weiche3
+         if ((weichentastencodeF & (1 << SET_B_C)) == 0) // Taste 3 gedrueckt , weiche3
          {
-            mcp2.gpioDigitalWrite(4, 0); // GPA7
+            mcp2.gpioDigitalWrite(OUT_B_B, 0); // GPA7
             weichenposition[GRUPPE_0] &= ~(1 << 1);
             w = {.weiche = 7, .richtung = 0};
             rb_push(&weichenringbuffer, w);
          }
 
-         if ((weichentastencodeF & (1 << 2)) == 0) // Taste 2 gedrueckt weiche3
+         if ((weichentastencodeF & (1 << SET_B_D)) == 0) // Taste 2 gedrueckt weiche3
          {
-            mcp2.gpioDigitalWrite(4, 1); //
+            mcp2.gpioDigitalWrite(OUT_B_B, 1); //
             weichenposition[GRUPPE_0] |= (1 << 1);
             w = {.weiche = 7, .richtung = 1};
             rb_push(&weichenringbuffer, w);
