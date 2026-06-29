@@ -936,13 +936,13 @@ void setup()
 
    //PIN-Nummern Bank vertauscht:
 
-   #define SET_A_A  14   // 1
-   #define SET_A_B  11   // 1
-   #define OUT_A_A  13   // 0
+   #define SET_A_A  9   // 1
+   #define SET_A_B  12   // 1
+   #define OUT_A_A  10   // 0
 
-   #define SET_A_C  15   // 1
-   #define SET_A_D  10   // 1
-   #define OUT_A_B  12   // 0
+   #define SET_A_C  8   // 1
+   #define SET_A_D  13   // 1
+   #define OUT_A_B  11   // 0
 
    #define SET_B_A  6   // 1
    #define SET_B_B  3   // 1
@@ -952,11 +952,11 @@ void setup()
    #define SET_B_D  2   // 1
    #define OUT_B_B  4   // 0
 
-   #define SET_A_A_BIT  6   // 1
-   #define SET_A_B_BIT  3   // 1
+   #define SET_A_A_BIT  1   // 1
+   #define SET_A_B_BIT  4  // 1
 
-   #define SET_A_C_BIT  7   // 1
-   #define SET_A_D_BIT  2   // 1
+   #define SET_A_C_BIT  0   // 1
+   #define SET_A_D_BIT  5   // 1
 
    #define SET_B_A_BIT  6   // 1
    #define SET_B_B_BIT  3   // 1
@@ -970,9 +970,16 @@ void setup()
    lcd.print("e");
    //_delay_ms(100);
 
-   mcp1.gpioPinMode(PIN_MODE);// A7 output, A6,A5 input 0110 1100 0110 1100
+   //mcp1.gpioPinMode(PIN_MODE);// A7 output, A6,A5 input 0110 1100 0110 1100
+   mcp1.gpioPinMode(0x00CC);
+   mcp1.gpioPinMode(0,0);
 
-   mcp1.gpioPinMode(0,OUTPUT);
+   mcp1.gpioPinMode(10,OUTPUT);
+   mcp1.gpioPinMode(11,OUTPUT);
+   #define CHECK  15
+   #define BLINK  0
+   mcp1.gpioPinMode(CHECK,OUTPUT);
+   mcp1.gpioPinMode(BLINK,OUTPUT);
    // 11001100
    mcp1.gpioPort(0xFFFF); // alle HI
 
@@ -1804,11 +1811,17 @@ void loop()
 
       if (loopcounter % 2 == 0)
       {
-         //mcp1.gpioDigitalWrite(0, 1); //
+         //mcp1.gpioDigitalWrite(CHECK, 1); //
+
+         mcp1.gpioDigitalWrite(BLINK, 1); 
+         // mcp1.gpioDigitalWrite(10, 1); //
       }
       else
       {
-         //mcp1.gpioDigitalWrite(0, 0); //
+        //mcp1.gpioDigitalWrite(CHECK, 0); //
+
+        mcp1.gpioDigitalWrite(BLINK, 0); //
+        //mcp1.gpioDigitalWrite(10, 0); //
       }
       lcd.setCursor(19, 0);
       lcd.print(char('A' + asciicounter));
