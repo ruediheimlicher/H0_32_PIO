@@ -1445,6 +1445,7 @@ void loop()
          
       }
 
+      /*
       weichentastencodeE = mcp2.gpioReadPortA(); //& 0x7F;
 
       weichenxor2 = weichentastencodeE ^ oldweichentastencodeE;
@@ -1484,8 +1485,8 @@ void loop()
          
          oldweichentastencodeE = weichentastencodeE;
       } // if(weichentastencodeDE ^
-
-
+      */
+      /*
       weichentastencodeF = mcp2.gpioReadPortB(); //& 0x7F;
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
       if (weichenxor3) // neue Daten
@@ -1526,7 +1527,7 @@ void loop()
          
          oldweichentastencodeF = weichentastencodeF;
       } //
-
+      */
       // Pot auslesen
 
       for (uint8_t i = 0; i < ANZLOKALPOTS - 2; i++) // lokal 2 kanaele
