@@ -114,6 +114,15 @@ uint16_t lerp(uint16_t a, uint16_t b, float t)
    return a * (1 - t) + b * t;
 }
 
+uint16_t lerpint(uint16_t a, uint16_t b, uint16_t t)
+{
+   /*
+   Use an integer for your parameter F, with F from 0 to 1024 instead of a float from 0 to 1. Then you can just do:
+  */
+   return (a * (1024 - t) + b * t) >> 10;
+}
+
+
 ADC *adc = new ADC(); // adc object
 // Set parameters
 
@@ -333,6 +342,13 @@ uint8_t weichenxor2 = 0;
 uint8_t weichenxor3 = 0;
 uint8_t weichenxor4 = 0;
 
+uint8_t weichennummer = 0; // 0..7
+uint8_t weichenrichtung = 0;
+
+uint8_t oldweichennummer = 0xFF; // 0..7
+uint8_t oldweichenrichtung = 0xFF;
+
+
 uint8_t tastenstatusA = 0;
 // pi.__BEGIN_DECLS
 
@@ -538,10 +554,17 @@ void pakettimerfunction()
          OSZI_A_LO(); // sync
          OSZI_B_HI();
       }
+
+      if ((paketpos == 1))
+      {
+         OSZI_B_LO();
+      }
+
       if (paketpos == ANZLOKS)
       {
          looptask = PAUSETASK;
       }
+
 
       if (paketpos == ANZLOKS - 1) // Weiche
       {
@@ -558,6 +581,11 @@ void pakettimerfunction()
    else
    {
       digitalWriteFast(CONTROL_PIN, LOW);
+   }
+
+   if ((paketpos == 1))
+   {
+      OSZI_B_LO();
    }
 
    if ((paketpos == ANZLOKS))
