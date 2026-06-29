@@ -143,7 +143,7 @@ ADC *adc = new ADC(); // adc object
 
 #define ANZLOKS 6
 
-#define ANZLOKALLOKS 8 // anz loks bei lokalem Betrieb
+#define ANZLOKALLOKS 6 // anz loks bei lokalem Betrieb
 #define ANZLOKALPOTS 4
 
 #define IMPULSTASK 1
