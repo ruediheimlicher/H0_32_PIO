@@ -172,6 +172,8 @@ protected:
 	void _GPIOstartSend(bool mode) {
 	#if defined (SPI_HAS_TRANSACTION)
 		SPI.beginTransaction(SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0));
+		//SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
+
 	#endif
 	#if defined(ESP8266)
 		GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, _pinRegister(_cs));//L
