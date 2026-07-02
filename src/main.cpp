@@ -1763,6 +1763,8 @@ void loop()
                lcd.setCursor(4, 2);
                lcd.print(w.richtung, HEX);
 
+               uint8_t weichenstatus[4] = {2,2,2,1};
+
             }
             else
             {
@@ -1829,14 +1831,14 @@ void loop()
       {
          //mcp1.gpioDigitalWrite(CHECK, 1); //
 
-         //mcp1.gpioDigitalWrite(BLINK, 1); 
+         mcp1.gpioDigitalWrite(BLINK, 1); 
          // mcp1.gpioDigitalWrite(10, 1); //
       }
       else
       {
         //mcp1.gpioDigitalWrite(CHECK, 0); //
 
-        //mcp1.gpioDigitalWrite(BLINK, 0); //
+        mcp1.gpioDigitalWrite(BLINK, 0); //
         //mcp1.gpioDigitalWrite(10, 0); //
       }
       lcd.setCursor(19, 0);
