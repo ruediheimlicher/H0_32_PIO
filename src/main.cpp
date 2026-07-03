@@ -1663,7 +1663,7 @@ void loop()
       {
          weichencounter++;
 
-         if (weichencounter == 24)
+         if (weichencounter > 24)
          {
             taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
             taskarray[ANZLOKS - 1][15] = HI;
@@ -1762,42 +1762,42 @@ void loop()
                {
                   weichenstatus |= (1 << WEICHESTART);
                   weichencounter = 0;
-               }
 
-               for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
-               {
-                  if (weichennummer & (1 << i))
+                  for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
                   {
-                     speedarray[i] = HI;
-                     // taskarray[0][8-i] = HI;
-                     taskarray[weichenpos][5 + i] = HI;
-                     // lcd.print("1");
-                     // speed_send |= (1<<i);
+                     if (weichennummer & (1 << i))
+                     {
+                        speedarray[i] = HI;
+                        // taskarray[0][8-i] = HI;
+                        taskarray[weichenpos][5 + i] = HI;
+                        // lcd.print("1");
+                        // speed_send |= (1<<i);
+                     }
+                     else
+                     {
+                        speedarray[i] = LO;
+                        // taskarray[0][8-i] = LO;
+                        taskarray[weichenpos][5 + i] = LO;
+                        // lcd.print("0");
+                        // speed_send &= ~(1<<i);
+                     }
+                  }
+                  taskarray[weichenpos][17] = taskarray[weichenpos][5];
+                  taskarray[weichenpos][18] = taskarray[weichenpos][6];
+                  taskarray[weichenpos][19] = taskarray[weichenpos][7];
+                  taskarray[weichenpos][20] = taskarray[weichenpos][8];
+
+                  // richtung
+                  if (w.richtung == 1)
+                  {
+                     taskarray[weichenpos][4] = HI;  // Ablenkung
+                     taskarray[weichenpos][16] = HI; // Ablenkung
                   }
                   else
                   {
-                     speedarray[i] = LO;
-                     // taskarray[0][8-i] = LO;
-                     taskarray[weichenpos][5 + i] = LO;
-                     // lcd.print("0");
-                     // speed_send &= ~(1<<i);
+                     taskarray[weichenpos][4] = LO;  // Gerade
+                     taskarray[weichenpos][16] = LO; // Gerade
                   }
-               }
-               taskarray[weichenpos][17] = taskarray[weichenpos][5];
-               taskarray[weichenpos][18] = taskarray[weichenpos][6];
-               taskarray[weichenpos][19] = taskarray[weichenpos][7];
-               taskarray[weichenpos][20] = taskarray[weichenpos][8];
-
-               // richtung
-               if (w.richtung == 1)
-               {
-                  taskarray[weichenpos][4] = HI;  // Ablenkung
-                  taskarray[weichenpos][16] = HI; // Ablenkung
-               }
-               else
-               {
-                  taskarray[weichenpos][4] = LO;  // Gerade
-                  taskarray[weichenpos][16] = LO; // Gerade
                }
             }
             else
