@@ -550,6 +550,7 @@ void pakettimerfunction()
          looptask = IMPULSTASK;
          OSZI_A_LO(); // sync
          OSZI_B_HI();
+   
       }
 
       if ((paketpos == 1))
@@ -1553,6 +1554,7 @@ void loop()
 
       looptask = IMPULSTASK;
 
+
    } // if (sincemcp )
 
    // #pragma mark EMITTER
@@ -1663,10 +1665,13 @@ void loop()
       {
          weichencounter++;
 
-         if (weichencounter > 24)
+         if ((weichencounter > 24) ) //&& (weichenstatus & (1 << WEICHERUN)))
          {
-            taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-            taskarray[ANZLOKS - 1][15] = HI;
+           taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+           taskarray[ANZLOKS - 1][15] = HI;
+
+            weichenstatus &= ~(1 << WEICHERUN);
+
          }
       }
       else if (weichencounter >= 63)
@@ -1677,6 +1682,96 @@ void loop()
    }
 
    // errcounter++;
+
+   if (rb_count(&weichenringbuffer))
+         {
+            weichendata w;
+
+            int erfolg = rb_pop(&weichenringbuffer, &w);
+            if (erfolg == 0)
+            {
+               /*
+               lcd.setCursor(6, 2);
+               lcd.print("+");
+               lcd.setCursor(0, 2);
+               lcd.print(w.weiche, HEX);
+               lcd.setCursor(4, 2);
+               lcd.print(w.richtung, HEX);
+               */
+               uint8_t weichenadresse[4] = {2, 2, 2, 1};
+               uint8_t weichenpos = ANZLOKS - 1;
+               taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
+               taskarray[weichenpos][1] = tritarray[weichenadresse[1]];
+               taskarray[weichenpos][2] = tritarray[weichenadresse[2]];
+               taskarray[weichenpos][3] = tritarray[weichenadresse[3]]; // OPEN
+               // rep
+               taskarray[weichenpos][12] = taskarray[weichenpos][0];
+               taskarray[weichenpos][13] = taskarray[weichenpos][1];
+               taskarray[weichenpos][14] = taskarray[weichenpos][2];
+               taskarray[weichenpos][15] = taskarray[weichenpos][3];
+
+               uint8_t weichennummer = w.weiche;
+
+               if (!(weichenstatus & (1 << WEICHESTART)))
+               {
+                  weichenstatus |= (1 << WEICHESTART);
+                  weichenstatus |= (1 << WEICHERUN);
+                  weichencounter = 0;
+                  sinceweiche = 0;
+
+                  for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
+                  {
+                     if (weichennummer & (1 << i))
+                     {
+                        speedarray[i] = HI;
+                        taskarray[weichenpos][5 + i] = HI;
+                        // lcd.print("1");
+                        // speed_send |= (1<<i);
+                     }
+                     else
+                     {
+                        speedarray[i] = LO;
+                        taskarray[weichenpos][5 + i] = LO;
+                        // lcd.print("0");
+                        // speed_send &= ~(1<<i);
+                     }
+                  }
+                  taskarray[weichenpos][17] = taskarray[weichenpos][5];
+                  taskarray[weichenpos][18] = taskarray[weichenpos][6];
+                  taskarray[weichenpos][19] = taskarray[weichenpos][7];
+                  taskarray[weichenpos][20] = taskarray[weichenpos][8];
+
+                  // richtung
+                  if (w.richtung == 1)
+                  {
+                     taskarray[weichenpos][4] = HI;  // Ablenkung
+                     taskarray[weichenpos][16] = HI; // Ablenkung
+                  }
+                  else
+                  {
+                     taskarray[weichenpos][4] = LO;  // Gerade
+                     taskarray[weichenpos][16] = LO; // Gerade
+                  }
+               }
+            }
+            else
+            {
+               lcd.setCursor(6, 2);
+               lcd.print("*");
+            }
+         }
+         else
+         {
+            /*
+            lcd.setCursor(0, 2);
+            lcd.print("  ");
+            lcd.setCursor(4, 2);
+            lcd.print("  ");
+            lcd.setCursor(6, 2);
+            lcd.print("-");
+            */
+         } 
+         // pop
    // sinceblink = 0;
    if (sinceblink > 500)
    {
@@ -1730,6 +1825,7 @@ void loop()
          // oldweichentastencodeD = weichentastencodeD;
          // mcp1.gpioDigitalWrite(7,0); //
 
+         /*
          if (rb_count(&weichenringbuffer))
          {
             weichendata w;
@@ -1761,14 +1857,15 @@ void loop()
                if (!(weichenstatus & (1 << WEICHESTART)))
                {
                   weichenstatus |= (1 << WEICHESTART);
+                  weichenstatus |= (1 << WEICHERUN);
                   weichencounter = 0;
+                  sinceweiche = 0;
 
                   for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
                   {
                      if (weichennummer & (1 << i))
                      {
                         speedarray[i] = HI;
-                        // taskarray[0][8-i] = HI;
                         taskarray[weichenpos][5 + i] = HI;
                         // lcd.print("1");
                         // speed_send |= (1<<i);
@@ -1776,7 +1873,6 @@ void loop()
                      else
                      {
                         speedarray[i] = LO;
-                        // taskarray[0][8-i] = LO;
                         taskarray[weichenpos][5 + i] = LO;
                         // lcd.print("0");
                         // speed_send &= ~(1<<i);
@@ -1814,7 +1910,9 @@ void loop()
             lcd.print("  ");
             lcd.setCursor(6, 2);
             lcd.print("-");
-         }
+         } 
+         */
+         // pop
 
          /*
          lcd.setCursor(16,3);
