@@ -436,6 +436,8 @@ volatile uint8_t weichenstatus = 0;
 volatile uint16_t weichencounter = 0;
 volatile uint8_t tastencounter = 0;
 
+uint8_t aktuelleweiche = 0xFF;
+
 uint8_t weichenXORcounterA = 0;
 uint8_t weichenXORcounterB = 0;
 uint8_t weichenXORcounterC = 0;
@@ -1554,8 +1556,12 @@ void loop()
 
       looptask = IMPULSTASK;
 
+      
+      taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+      taskarray[ANZLOKS - 1][15] = HI;
 
-   } // if (sincemcp )
+
+   } // if (looptask == PAUSETASK )
 
    // #pragma mark EMITTER
 
@@ -1711,6 +1717,8 @@ void loop()
                taskarray[weichenpos][15] = taskarray[weichenpos][3];
 
                uint8_t weichennummer = w.weiche;
+               aktuelleweiche = w.weiche;
+               aktuelleweiche |= (w.richtung<<4);
 
                if (!(weichenstatus & (1 << WEICHESTART)))
                {
