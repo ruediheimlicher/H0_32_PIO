@@ -162,6 +162,7 @@ ADC *adc = new ADC(); // adc object
 volatile uint8_t loopstatus = 0;
 volatile uint8_t loopcounter = 0;
 volatile uint8_t sourcestatus = 1; // local/USB
+uint8_t oldsourcestatus = 1;
 #define LOCAL 0
 #define USB 1
 #define FIRSTRUN 1
@@ -435,6 +436,12 @@ volatile uint8_t weichebyte7 = 0;
 volatile uint8_t weichenstatus = 0;
 volatile uint16_t weichencounter = 0;
 volatile uint8_t tastencounter = 0;
+
+volatile uint16_t usbweichencounter = 0;
+volatile uint8_t usbgeradecounter = 0;
+volatile uint8_t usbablenkungcounter = 0;
+
+
 
 uint8_t aktuelleweiche = 0xFF;
 
@@ -1612,23 +1619,6 @@ void loop()
       sendbuffer[10] = 0xAB;
       sendbuffer[12] = emitter & 0x00FF;
       sendbuffer[13] = (emitter & 0xFF00) >> 8;
-      /*
-       uint8_t n = RawHID.send(sendbuffer, 10);
-       if (n > 0)
-       {
-       // Serial.print(F("Transmit packet "));
-       // Serial.println(n);
-       // // Serial.print(" count: ");
-       // // Serial.println(packetCount );
-       packetCount = packetCount + 1;
-       } else
-       {
-       // Serial.println(F("Unable to transmit packet"));
-       }
-       */
-      //    // Serial.print("emittermittel: ");
-      //    // Serial.print(emittermittel);
-      //    // Serial.print("\n");
 
       /*
        uint16_t pot0 = readPot(A0);
@@ -1688,7 +1678,7 @@ void loop()
    }
 
    // errcounter++;
-
+   /*
    if (rb_count(&weichenringbuffer))
          {
             weichendata w;
@@ -1696,14 +1686,14 @@ void loop()
             int erfolg = rb_pop(&weichenringbuffer, &w);
             if (erfolg == 0)
             {
-               /*
+               
                lcd.setCursor(6, 2);
                lcd.print("+");
                lcd.setCursor(0, 2);
                lcd.print(w.weiche, HEX);
                lcd.setCursor(4, 2);
                lcd.print(w.richtung, HEX);
-               */
+               
                uint8_t weichenadresse[4] = {2, 2, 2, 1};
                uint8_t weichenpos = ANZLOKS - 1;
                taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
@@ -1770,16 +1760,17 @@ void loop()
          }
          else
          {
-            /*
+            
             lcd.setCursor(0, 2);
             lcd.print("  ");
             lcd.setCursor(4, 2);
             lcd.print("  ");
             lcd.setCursor(6, 2);
             lcd.print("-");
-            */
+            
          } 
          // pop
+   */
    // sinceblink = 0;
    if (sinceblink > 500)
    {
@@ -1833,7 +1824,7 @@ void loop()
          // oldweichentastencodeD = weichentastencodeD;
          // mcp1.gpioDigitalWrite(7,0); //
 
-         /*
+         
          if (rb_count(&weichenringbuffer))
          {
             weichendata w;
@@ -1919,9 +1910,9 @@ void loop()
             lcd.setCursor(6, 2);
             lcd.print("-");
          } 
-         */
+         
          // pop
-
+         
          /*
          lcd.setCursor(16,3);
          lcd.print("   ");
@@ -1941,15 +1932,23 @@ void loop()
       }
       else if (sourcestatus & 0x02)
       {
+         
       }
+      lcd.setCursor(0, 2);
+      lcdputint3(usbweichencounter);
+      lcd.setCursor(4, 2);
+      lcdputint3(usbablenkungcounter);
+      lcd.setCursor(8, 2);
+      lcdputint3(usbgeradecounter);
 
+      /*
       lcd.setCursor(8, 2);
       lcdputint3(weichencounter);
       lcd.print(' ');
       lcdputint3(tastencounter);
       lcd.print(' ');
       lcdputint3(weichenstatus);
-
+      */
       /*
       lcd.setCursor(0,1);
       lcdputint3(speedraw0);
@@ -2104,6 +2103,20 @@ void loop()
 
       sourcestatus = buffer[21];
 
+      if((sourcestatus != oldsourcestatus))
+      {
+         //if(sourcestatus == 2)
+         {
+
+         
+         usbablenkungcounter = 0;
+         usbgeradecounter = 0;
+         usbweichencounter = 0;
+         }
+         oldsourcestatus = sourcestatus;
+      }
+      
+
       /*
       //// Serial.println(" ");
       // Serial.print("******************  usbtask *** ");
@@ -2139,8 +2152,25 @@ void loop()
          {
          case 0xBF: // Weiche
          {
+
             loknummer = ANZLOKS - 1; // letztes Paket, Weichen
             //  address
+            weichendata wC; // data in ringbuffer
+            uint8_t rawrichtung = buffer[16];
+            if(rawrichtung)
+            {
+               usbablenkungcounter++;
+            }
+            else
+            {
+               usbgeradecounter++;
+            }
+
+            wC = {.weiche = buffer[17], .richtung = rawrichtung};
+            rb_push(&weichenringbuffer, wC);
+            usbweichencounter++;
+            break;
+
 
             taskarray[loknummer][0] = tritarray[buffer[8]];
             taskarray[loknummer][1] = tritarray[buffer[9]];
@@ -2170,6 +2200,8 @@ void loop()
 
             speed_raw = buffer[17]; // Weiche 0..7, 3 bit
             speed = speed_raw;
+
+
 
             // uint8_t  speed_send = 0;
 
@@ -2205,15 +2237,15 @@ void loop()
             {
                taskarray[loknummer][4] = HI;
                taskarray[loknummer][16] = HI;
-               lcd.setCursor(16, 2);
-               lcd.print("ON ");
+               //lcd.setCursor(16, 2);
+               //lcd.print("ON ");
             }
             else
             {
                taskarray[loknummer][4] = LO;
                taskarray[loknummer][16] = LO;
-               lcd.setCursor(16, 2);
-               lcd.print("OFF");
+               //lcd.setCursor(16, 2);
+               //lcd.print("OFF");
             }
          }
 
