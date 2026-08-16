@@ -1805,9 +1805,9 @@ void loop()
 
          // weichenXORcounterA
          lcd.setCursor(12, 3);
-         lcd.print((weichenXORcounterA));
+         lcd.print((weichenXORcounterA,HEX));
          lcd.setCursor(15, 3);
-         lcd.print((weichenXORcounterB));
+         lcd.print((weichenXORcounterB,HEX));
 
          // asciicounter++;
          // asciicounter &= 0x0F;
