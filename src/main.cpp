@@ -1805,9 +1805,9 @@ void loop()
 
          // weichenXORcounterA
          lcd.setCursor(12, 3);
-         lcd.print((weichenXORcounterA,HEX));
+         lcd.print(weichenXORcounterA,HEX);
          lcd.setCursor(15, 3);
-         lcd.print((weichenXORcounterB,HEX));
+         lcd.print(weichenXORcounterB, HEX);
 
          // asciicounter++;
          // asciicounter &= 0x0F;
@@ -1816,7 +1816,7 @@ void loop()
          lcd.setCursor(12, 3);
          lcd.print((weichentastencodeE), HEX);
          lcd.setCursor(15, 3);
-         lcd.print((weichentastencodeF), HEX);
+         lcd.print((weichentastencodeF, HEX);
          */
 
          // mcp2.gpioDigitalWrite(15,1); //
