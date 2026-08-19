@@ -461,6 +461,7 @@ volatile uint8_t weichenbuffer[4] = {};
 #define ABLENKUNG 6
 #define GERADE 7
 #define WEICHENIMPULSDAUER 0xAF
+#define MAXWEICHENCOUNTER  125
 
 LiquidCrystal_I2C lcd(
     0x27,       // I2C-Adresse
@@ -1657,11 +1658,11 @@ void loop()
 
    if (weichenstatus & (1 << WEICHESTART))
    {
-      if (weichencounter < 64)
+      if (weichencounter < MAXWEICHENCOUNTER)
       {
          weichencounter++;
 
-         if ((weichencounter > 24) ) //&& (weichenstatus & (1 << WEICHERUN)))
+         if ((weichencounter > 0x20) ) //&& (weichenstatus & (1 << WEICHERUN)))
          {
            taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
            taskarray[ANZLOKS - 1][15] = HI;
@@ -1670,7 +1671,7 @@ void loop()
 
          }
       }
-      else if (weichencounter >= 63)
+      else if (weichencounter >= MAXWEICHENCOUNTER) // Pause
       {
          // weichencounter = 64;
          weichenstatus &= ~(1 << WEICHESTART);
@@ -1777,7 +1778,7 @@ void loop()
       // OSZI_C_TOGG();
 
       //  mcp2.gpioDigitalWrite(15,0); //
-      if (sourcestatus & 0x01)
+      if (sourcestatus & 0x01) // local
       {
 
          // errcounter++;
