@@ -63,7 +63,7 @@
 #define CHANGED         2
 #define CALIB_START     3
 #define CALIB_END       4
-#define  CALIBRIERU£NG         3
+#define  CALIBRIERUNG         3
 
 #define PPM_DIR_PIN     3
 #define PPM_DATA_PIN    4  // PPM-Eingang an Pin 4
