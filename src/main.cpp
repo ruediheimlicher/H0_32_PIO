@@ -141,7 +141,10 @@ ADC *adc = new ADC(); // adc object
 
 #define CURR_PIN     A6
 
-#define ANZLOKS       4
+#define ANZLOKS       6
+
+#define ANZLOKALLOKS 6 // anz loks bei lokalem Betrieb
+#define ANZLOKALPOTS 4
 
 #define POT_0_PIN    A0
 #define POT_1_PIN    A1
@@ -151,7 +154,8 @@ ADC *adc = new ADC(); // adc object
 #define SOURCECONTROL    6 // Eingang, HI wenn local
 #define LOKSYNC         8
 
-
+#define IMPULSTASK 1
+#define PAUSETASK 2
 
 #define OSZI_PULS_A        8
 #define OSZI_PULS_B        9 
@@ -174,6 +178,9 @@ elapsedMillis msUntilNextSend;
 unsigned int packetCount = 0;
 
 volatile uint8_t usbtask = 0;
+
+
+volatile uint8_t looptask = 0;
 
 volatile uint8_t teensytask = 0;
 
@@ -461,8 +468,8 @@ void pakettimerfunction()
    
    //digitalWriteFast(TAKT_PIN, !digitalReadFast(TAKT_PIN)); // toggle
    
-   aktualcommand = taskarray[paketpos][bytepos]; // zu schickendes command
-   
+   aktualcommand = (paketpos < ANZLOKS) ? taskarray[paketpos][bytepos] : 0; // zu schickendes command, 16 bit; während Pause (paketpos >= ANZLOKS) keinen OOB-Read
+
    
    if ((bytepos) == 0)
    {
@@ -472,19 +479,9 @@ void pakettimerfunction()
          OSZI_A_LO();
          //digitalWriteFast(LOKSYNC,LOW);
          }
-      if(paketpos == 1)
-         {
-         //OSZI_A_HI();
-         //digitalWriteFast(LOKSYNC,LOW);
-         }
+   
       // syncsignal
-      //if ((sourcestatus & 0x01) && (paketpos == 1))// local
-      if ((sourcestatus & 0x01) && (loknummer == 0))// local
-
-      {
-         //OSZI_A_LO();
-         //digitalWriteFast(LOKSYNC,LOW);
-      }
+ 
       //
       else if ((sourcestatus & 0x02) && (paketpos == loknummer)) // USB
       {
@@ -497,23 +494,21 @@ void pakettimerfunction()
          //sinceweiche = 0;
       }
    }
+
+   if (paketpos == ANZLOKS)
+      {
+         looptask = PAUSETASK;
+      }
    //OSZI_A_HI();
-   if (aktualcommand & (1<<commandpos))
+   if ((aktualcommand & (1<<commandpos)) && (paketpos < ANZLOKS))
    {
-      digitalWriteFast(OUT_PIN,HIGH);
-      digitalWriteFast(OUT_PIN_INV,LOW);
-      
-      digitalWriteFast(CONTROL_PIN,HIGH);
-      
+      digitalWriteFast(CONTROL_PIN,HIGH); // output
    }
    else
    {
-      digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
-      
       digitalWriteFast(CONTROL_PIN,LOW);
    }
-   //digitalWriteFast(LOKSYNC,HIGH);
+   
    if (commandpos < 15)
    {
       commandpos++;
@@ -523,11 +518,7 @@ void pakettimerfunction()
    {
       commandpos = 0;
       OSZI_A_HI();
-      //digitalWriteFast(LOKSYNC,HIGH);
-      
-      digitalWriteFast(OUT_PIN,LOW);
-      digitalWriteFast(OUT_PIN_INV,HIGH);
-      
+        
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
       {
