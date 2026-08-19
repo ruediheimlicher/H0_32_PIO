@@ -70,6 +70,9 @@
 #define CSN_PIN 23
 RF24 radio(CE_PIN, CSN_PIN);
 uint16_t errcounter = 0;
+uint16_t errcounterA = 0;
+uint16_t errcounterB = 0;
+uint16_t errcounterC = 0;
 uint16_t radiocounter = 0;
 const uint64_t pipeOut = 0xABCDABCD71LL; // NOTE: The address in the Transmitter and Receiver code must be the same "0xABCDABCD71LL" | Verici ve Alıcı kodundaki adres aynı olmalıdır
 
@@ -509,29 +512,26 @@ void pakettimerfunction()
       digitalWriteFast(CONTROL_PIN,LOW);
    }
    
+   
    if (commandpos < 15)
    {
       commandpos++;
-      //digitalWriteFast(LOKSYNC,HIGH);
    }
    else 
    {
       commandpos = 0;
       OSZI_A_HI();
-        
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
       {
          bytepos = 0;
-         //OSZI_A_HI();
-         //OSZI_B_LO();
+
          if (paketpos < paketmax - 1)
          {
             paketpos++; // jede Lok ein Paket
             if (paketpos == paketmax - 1) // Paketserie fertig
             {
-               //
-               //OSZI_B_LO();
+ 
                paketpos = 0;
                //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
                //taskarray[ANZLOKS - 1][15] = HI;
@@ -547,10 +547,7 @@ void pakettimerfunction()
       }
    
    }
-   
-   
-   //taskarray[0][5] = LO;
-   
+
 }
 
 /*
