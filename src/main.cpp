@@ -599,6 +599,7 @@ void pakettimerfunction()
    {
       OSZI_B_LO();
    }
+   /*
    commandpos++;
    if (commandpos > 19)
    {
@@ -618,6 +619,37 @@ void pakettimerfunction()
          }
       }
    }
+   */
+  if (commandpos < 15)
+{
+   commandpos++;
+}
+else 
+{
+   commandpos = 0;
+   OSZI_A_HI();
+   bytepos++;
+   if (bytepos >= 20 + pause) // Paket fertig
+   {
+      bytepos = 0;
+      
+      if (paketpos < paketmax - 1)
+      {
+         paketpos++; // jede Lok ein Paket
+         if (paketpos == paketmax - 1) // Paketserie fertig
+         {
+            paketpos = 0;
+            //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+            //taskarray[ANZLOKS - 1][15] = HI;
+            //OSZI_B_HI();
+         }
+      }
+      else 
+      {
+         //paketpos = 0;
+      }
+   }
+}
 }
 
 /*
@@ -1782,7 +1814,7 @@ void loop()
       {
 
          // errcounter++;
-
+         /*
          lcd.setCursor(0, 1);
          lcdputint3(lokaladressearray[0]);
          lcd.setCursor(4, 1);
@@ -1809,7 +1841,7 @@ void loop()
          lcd.print(weichenXORcounterA,HEX);
          lcd.setCursor(15, 3);
          lcd.print(weichenXORcounterB, HEX);
-
+         */
          // asciicounter++;
          // asciicounter &= 0x0F;
 
@@ -1833,13 +1865,14 @@ void loop()
             int erfolg = rb_pop(&weichenringbuffer, &w);
             if (erfolg == 0)
             {
+               /*
                lcd.setCursor(6, 2);
                lcd.print("+");
                lcd.setCursor(0, 2);
                lcd.print(w.weiche, HEX);
                lcd.setCursor(4, 2);
                lcd.print(w.richtung, HEX);
-
+               */
                uint8_t weichenadresse[4] = {2, 2, 2, 1};
                uint8_t weichenpos = ANZLOKS - 1;
                taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
@@ -1898,18 +1931,20 @@ void loop()
             }
             else
             {
-               lcd.setCursor(6, 2);
-               lcd.print("*");
+               //lcd.setCursor(6, 2);
+               //lcd.print("*");
             }
          }
          else
          {
+            /*
             lcd.setCursor(0, 2);
             lcd.print("  ");
             lcd.setCursor(4, 2);
             lcd.print("  ");
             lcd.setCursor(6, 2);
             lcd.print("-");
+            */
          } 
          
          // pop
@@ -1920,7 +1955,7 @@ void loop()
          lcd.setCursor(14,3);
          lcd.print(doubleadress);
          */
-
+        /*
          lcd.setCursor(0, 0);
          lcdputint3(localpotarray[0]);
          lcd.setCursor(4, 0);
@@ -1929,19 +1964,21 @@ void loop()
          lcdputint3(localpotarray[2]); // von nRF pot 2
          lcd.setCursor(12, 0);
          lcdputint3(localpotarray[3]); // von nRF pot 3
+         */
          // errcounter++;
       }
       else if (sourcestatus & 0x02)
       {
          
       }
+      /*
       lcd.setCursor(0, 2);
       lcdputint3(usbweichencounter);
       lcd.setCursor(4, 2);
       lcdputint3(usbablenkungcounter);
       lcd.setCursor(8, 2);
       lcdputint3(usbgeradecounter);
-
+      */
       /*
       lcd.setCursor(8, 2);
       lcdputint3(weichencounter);
@@ -3390,8 +3427,5 @@ void loop()
 
    // every 4 seconds, send a packet to the computer
 
-   if (msUntilNextSend > 4000)
-   {
-      msUntilNextSend = msUntilNextSend - 2000;
-   }
+   
 } // loop
