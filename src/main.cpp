@@ -247,6 +247,8 @@ uint8_t regB = 0;
 uint8_t weichenaddressarray[2][4] = {{2, 2, 2, 1}, {2, 2, 1, 1}};
 uint8_t weichenposition[2] = {}; // 0: gerade 1: ablenkung
 
+uint8_t weichentastenprellarrayA[16] = {};
+
 #define RINGBUFFER_SIZE 32
 #define RINGBUFFER_MASK (RINGBUFFER_SIZE - 1)
 
@@ -560,7 +562,7 @@ void pakettimerfunction()
          looptask = IMPULSTASK;
          OSZI_A_LO(); // sync
          OSZI_B_HI();
-   
+         //weichenXORcounterD = 0;
       }
 
       if ((paketpos == 1))
@@ -571,6 +573,7 @@ void pakettimerfunction()
       if (paketpos == ANZLOKS)
       {
          looptask = PAUSETASK;
+         //weichenXORcounterD = 0;
       }
 
       if (paketpos == ANZLOKS - 1) // Weiche
@@ -1518,9 +1521,10 @@ void loop()
       } // if(weichentastencodeDE ^
 
       //weichendata wF;                            // data in ringbuffer
+
       weichentastencodeF = mcp2.gpioReadPortB(); //& 0xFE;
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
-      if (weichenxor3) // neue Daten
+      if ((weichenxor3))// neue Daten
       {
          weichenXORcounterD++;
          if ((weichentastencodeF & (1 << SET_B_A_BIT)) == 0) // Taste 6 gedrueckt
@@ -1539,7 +1543,7 @@ void loop()
             rb_push(&weichenringbuffer, wF);
          }
          // Weiche F Position 1
-         if ((weichentastencodeF & (1 << SET_B_C_BIT)) == 0) // Taste 3 gedrueckt , weiche3
+         if ((weichentastencodeF & (1 << SET_B_C_BIT)) == 0) // Taste 7 gedrueckt , weiche3
          {
             mcp2.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
             weichenposition[GRUPPE_0] &= ~(1 << 7);
@@ -1547,7 +1551,7 @@ void loop()
             rb_push(&weichenringbuffer, wF);
          }
 
-         if ((weichentastencodeF & (1 << SET_B_D_BIT)) == 0) // Taste 2 gedrueckt weiche3
+         if ((weichentastencodeF & (1 << SET_B_D_BIT)) == 0) // Taste 7 gedrueckt weiche3
          {
             mcp2.gpioDigitalWrite(OUT_B_B, LOW); //
             weichenposition[GRUPPE_0] |= (1 << 7);
@@ -1732,6 +1736,18 @@ void loop()
          if (rb_count(&weichenringbuffer))
          {
             weichendata w;
+            // weichenXORcounterA
+         lcd.setCursor(0, 3);
+         lcd.print(weichenXORcounterA,HEX);
+         lcd.setCursor(4, 3);
+         lcd.print(weichenXORcounterB, HEX);
+         lcd.setCursor(8, 3);
+         lcd.print(weichenXORcounterC,HEX);
+         lcd.setCursor(12, 3);
+         lcd.print(weichenXORcounterD, HEX);
+         lcd.setCursor(12, 2);
+         lcd.print(oldweichentastencodeF, HEX);
+
 
             int erfolg = rb_pop(&weichenringbuffer, &w);
             if (erfolg == 0)
@@ -1758,7 +1774,7 @@ void loop()
 
                uint8_t weichennummer = w.weiche;
 
-               if (!(weichenstatus & (1 << WEICHESTART)))
+               if ((!(weichenstatus & (1 << WEICHESTART))) )
                {
                   weichenstatus |= (1 << WEICHESTART);
                   weichenstatus |= (1 << WEICHERUN);
@@ -1767,19 +1783,18 @@ void loop()
 
                   for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
                   {
+                     // Weichennummer einsetzen
                      if (weichennummer & (1 << i))
                      {
-                        speedarray[i] = HI;
+                        
                         taskarray[weichenpos][5 + i] = HI;
                         // lcd.print("1");
-                        // speed_send |= (1<<i);
                      }
                      else
                      {
-                        speedarray[i] = LO;
+                        
                         taskarray[weichenpos][5 + i] = LO;
                         // lcd.print("0");
-                        // speed_send &= ~(1<<i);
                      }
                   }
                   taskarray[weichenpos][17] = taskarray[weichenpos][5];
@@ -1799,6 +1814,7 @@ void loop()
                      taskarray[weichenpos][16] = LO; // Gerade
                   }
                }
+               weichenXORcounterA = 0;
             }
             else
             {
