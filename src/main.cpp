@@ -461,7 +461,7 @@ volatile uint8_t weichenbuffer[4] = {};
 #define ABLENKUNG 6
 #define GERADE 7
 #define WEICHENIMPULSDAUER 0xAF
-#define MAXWEICHENCOUNTER  125
+#define MAXWEICHENCOUNTER  100
 
 LiquidCrystal_I2C lcd(
     0x27,       // I2C-Adresse
@@ -599,57 +599,37 @@ void pakettimerfunction()
    {
       OSZI_B_LO();
    }
-   /*
-   commandpos++;
-   if (commandpos > 19)
+   
+  if (commandpos < 15)
+   {
+      commandpos++;
+   }
+   else 
    {
       commandpos = 0;
-      OSZI_A_HI(); // sync, erster Impuls fertig generiert
-      errcounter++;
+      OSZI_A_HI();
       bytepos++;
       if (bytepos >= 20 + pause) // Paket fertig
       {
-         errcounterB++;
          bytepos = 0;
-         paketpos += 1;
-         // jede Lok ein Paket
-         if (paketpos >= paketmax - 1) // Paketserie fertig
+         
+         if (paketpos < paketmax - 1)
          {
-            paketpos = 0;
+            paketpos++; // jede Lok ein Paket
+            if (paketpos == paketmax - 1) // Paketserie fertig
+            {
+               paketpos = 0;
+               //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+               //taskarray[ANZLOKS - 1][15] = HI;
+               //OSZI_B_HI();
+            }
+         }
+         else 
+         {
+            //paketpos = 0;
          }
       }
    }
-   */
-  if (commandpos < 15)
-{
-   commandpos++;
-}
-else 
-{
-   commandpos = 0;
-   OSZI_A_HI();
-   bytepos++;
-   if (bytepos >= 20 + pause) // Paket fertig
-   {
-      bytepos = 0;
-      
-      if (paketpos < paketmax - 1)
-      {
-         paketpos++; // jede Lok ein Paket
-         if (paketpos == paketmax - 1) // Paketserie fertig
-         {
-            paketpos = 0;
-            //taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-            //taskarray[ANZLOKS - 1][15] = HI;
-            //OSZI_B_HI();
-         }
-      }
-      else 
-      {
-         //paketpos = 0;
-      }
-   }
-}
 }
 
 /*
@@ -1399,7 +1379,7 @@ void loop()
 
       weichenposition[GRUPPE_0] = 0;
 
-      weichendata wC; // data in ringbuffer
+      //weichendata wC; // data in ringbuffer
 
       weichentastencodeC = mcp1.gpioReadPortA();
       weichenxor0 = weichentastencodeC ^ oldweichentastencodeC;
@@ -1412,7 +1392,7 @@ void loop()
 
             mcp1.gpioDigitalWrite(OUT_A_A, HIGH);   // GPA7
             weichenposition[GRUPPE_0] &= ~(1 << 0); // bit fuer weiche loeschen
-            wC = {.weiche = 0, .richtung = 0};
+            weichendata wC = {.weiche = 0, .richtung = 0};
             rb_push(&weichenringbuffer, wC);
          }
 
@@ -1420,7 +1400,7 @@ void loop()
          {
             mcp1.gpioDigitalWrite(OUT_A_A, LOW);   //
             weichenposition[GRUPPE_0] |= (1 << 0); // bit fur weiche setzen
-            wC = {.weiche = 0, .richtung = 1};
+            weichendata wC = {.weiche = 0, .richtung = 1};
             rb_push(&weichenringbuffer, wC);
          }
 
@@ -1429,7 +1409,7 @@ void loop()
          {
             mcp1.gpioDigitalWrite(OUT_A_B, HIGH); // GPA7
             weichenposition[GRUPPE_0] &= ~(1 << 1);
-            wC = {.weiche = 1, .richtung = 0};
+            weichendata wC = {.weiche = 1, .richtung = 0};
             rb_push(&weichenringbuffer, wC);
          }
 
@@ -1437,14 +1417,15 @@ void loop()
          {
             mcp1.gpioDigitalWrite(OUT_A_B, LOW); //
             weichenposition[GRUPPE_0] |= (1 << 1);
-            wC = {.weiche = 1, .richtung = 1};
+            weichendata wC = {.weiche = 1, .richtung = 1};
             rb_push(&weichenringbuffer, wC);
          }
 
          oldweichentastencodeC = weichentastencodeC;
+
       } // if(weichentastencodeD ^
 
-      weichendata wD;                                   // data in ringbuffer
+      //weichendata wD;                                   // data in ringbuffer
       weichentastencodeD = mcp1.gpioReadPortB() & 0xFE; // Blink exkl.
       weichenxor1 = weichentastencodeD ^ oldweichentastencodeD;
       if (weichenxor1) // neue Daten
@@ -1454,14 +1435,14 @@ void loop()
          if ((weichentastencodeD & (1 << SET_B_A_BIT)) == 0) // Taste 6 gedrueckt
          {
             mcp1.gpioDigitalWrite(OUT_B_A, HIGH); // GPB7
-            wD = {.weiche = 2, .richtung = 0};
+            weichendata wD = {.weiche = 2, .richtung = 0};
             rb_push(&weichenringbuffer, wD);
          }
 
          if ((weichentastencodeD & (1 << SET_B_B_BIT)) == 0) // Taste 5 gedrueckt
          {
             mcp1.gpioDigitalWrite(OUT_B_A, LOW); //
-            wD = {.weiche = 2, .richtung = 1};
+            weichendata wD = {.weiche = 2, .richtung = 1};
             rb_push(&weichenringbuffer, wD);
          }
 
@@ -1469,14 +1450,14 @@ void loop()
          if ((weichentastencodeD & (1 << SET_B_C_BIT)) == 0) // Taste 3 gedrueckt , weiche3
          {
             mcp1.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
-            wD = {.weiche = 3, .richtung = 0};
+            weichendata wD = {.weiche = 3, .richtung = 0};
             rb_push(&weichenringbuffer, wD);
          }
 
          if ((weichentastencodeD & (1 << SET_B_D_BIT)) == 0) // Taste 2 gedrueckt weiche3
          {
             mcp1.gpioDigitalWrite(OUT_B_B, LOW); //
-            wD = {.weiche = 3, .richtung = 1};
+            weichendata wD = {.weiche = 3, .richtung = 1};
             rb_push(&weichenringbuffer, wD);
          }
 
@@ -1488,7 +1469,7 @@ void loop()
       {
       }
 
-      weichendata wE;                            // data in ringbuffer
+      //weichendata wE;                            // data in ringbuffer
       weichentastencodeE = mcp2.gpioReadPortA(); //& 0x7F;
 
       weichenxor2 = weichentastencodeE ^ oldweichentastencodeE;
@@ -1501,7 +1482,7 @@ void loop()
             mcp2.gpioDigitalWrite(OUT_A_A, HIGH);   //
             weichenposition[GRUPPE_0] &= ~(1 << 4); // bit fuer weiche loeschen
 
-            wE = {.weiche = 4, .richtung = 0};
+            weichendata wE = {.weiche = 4, .richtung = 0};
             rb_push(&weichenringbuffer, wE);
          }
 
@@ -1510,7 +1491,7 @@ void loop()
             mcp2.gpioDigitalWrite(OUT_A_A, LOW);   //
             weichenposition[GRUPPE_0] |= (1 << 4); // bit fur weiche setzen
 
-            wE = {.weiche = 4, .richtung = 1};
+            weichendata wE = {.weiche = 4, .richtung = 1};
             rb_push(&weichenringbuffer, wE);
          }
 
@@ -1520,7 +1501,7 @@ void loop()
             mcp2.gpioDigitalWrite(OUT_A_B, HIGH);  // GPA7
             weichenposition[GRUPPE_0] |= (1 << 5); // bit fur weiche setzen
 
-            wE = {.weiche = 5, .richtung = 0};
+            weichendata wE = {.weiche = 5, .richtung = 0};
             rb_push(&weichenringbuffer, wE);
          }
 
@@ -1529,14 +1510,14 @@ void loop()
             mcp2.gpioDigitalWrite(OUT_A_B, LOW);   //
             weichenposition[GRUPPE_0] |= (1 << 5); // bit fur weiche setzen
 
-            wE = {.weiche = 5, .richtung = 1};
+            weichendata wE = {.weiche = 5, .richtung = 1};
             rb_push(&weichenringbuffer, wE);
          }
 
          oldweichentastencodeE = weichentastencodeE;
       } // if(weichentastencodeDE ^
 
-      weichendata wF;                            // data in ringbuffer
+      //weichendata wF;                            // data in ringbuffer
       weichentastencodeF = mcp2.gpioReadPortB(); //& 0xFE;
       weichenxor3 = weichentastencodeF ^ oldweichentastencodeF;
       if (weichenxor3) // neue Daten
@@ -1546,7 +1527,7 @@ void loop()
          {
             mcp2.gpioDigitalWrite(OUT_B_A, HIGH); //
             weichenposition[GRUPPE_0] &= ~(1 << 6);
-            wF = {.weiche = 6, .richtung = 0};
+            weichendata wF = {.weiche = 6, .richtung = 0};
             rb_push(&weichenringbuffer, wF);
          }
 
@@ -1554,7 +1535,7 @@ void loop()
          {
             mcp2.gpioDigitalWrite(OUT_B_A, LOW); //
             weichenposition[GRUPPE_0] |= (1 << 6);
-            wF = {.weiche = 6, .richtung = 1};
+            weichendata wF = {.weiche = 6, .richtung = 1};
             rb_push(&weichenringbuffer, wF);
          }
          // Weiche F Position 1
@@ -1562,7 +1543,7 @@ void loop()
          {
             mcp2.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
             weichenposition[GRUPPE_0] &= ~(1 << 7);
-            wF = {.weiche = 7, .richtung = 0};
+            weichendata wF = {.weiche = 7, .richtung = 0};
             rb_push(&weichenringbuffer, wF);
          }
 
@@ -1570,12 +1551,14 @@ void loop()
          {
             mcp2.gpioDigitalWrite(OUT_B_B, LOW); //
             weichenposition[GRUPPE_0] |= (1 << 7);
-            wF = {.weiche = 7, .richtung = 1};
+            weichendata wF = {.weiche = 7, .richtung = 1};
             rb_push(&weichenringbuffer, wF);
          }
 
          oldweichentastencodeF = weichentastencodeF;
       } //
+      taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
+      taskarray[ANZLOKS - 1][15] = HI;
 
       // Pot auslesen
 
@@ -1596,9 +1579,6 @@ void loop()
 
       looptask = IMPULSTASK;
 
-      
-      taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
-      taskarray[ANZLOKS - 1][15] = HI;
 
 
    } // if (looptask == PAUSETASK )
@@ -1670,23 +1650,7 @@ void loop()
 
    } // if sinceemitter
    // errcounter++;
-   /*
-   if((sinceweiche > 2) && (weichenstatus & (1<<WEICHESTART)))
-   {
-       loknummer = ANZLOKS - 1; // letztes Paket, Weichen
-      //  address
-      taskarray[loknummer][0] = weichenbuffer[0];
-      taskarray[loknummer][1] = weichenbuffer[1];
-      taskarray[loknummer][2] = weichenbuffer[2];
-      taskarray[loknummer][3] = weichenbuffer[3];
 
-      taskarray[loknummer][12] = weichenbuffer[0];
-      taskarray[loknummer][13] = weichenbuffer[1];
-      taskarray[loknummer][14] = weichenbuffer[2];
-      taskarray[loknummer][15] = weichenbuffer[3];
-
-   }
-   */
 
    if (weichenstatus & (1 << WEICHESTART))
    {
@@ -1700,7 +1664,6 @@ void loop()
            taskarray[ANZLOKS - 1][15] = HI;
 
             weichenstatus &= ~(1 << WEICHERUN);
-
          }
       }
       else if (weichencounter >= MAXWEICHENCOUNTER) // Pause
@@ -1711,101 +1674,9 @@ void loop()
    }
 
    // errcounter++;
-   /*
-   if (rb_count(&weichenringbuffer))
-         {
-            weichendata w;
-
-            int erfolg = rb_pop(&weichenringbuffer, &w);
-            if (erfolg == 0)
-            {
-               
-               lcd.setCursor(6, 2);
-               lcd.print("+");
-               lcd.setCursor(0, 2);
-               lcd.print(w.weiche, HEX);
-               lcd.setCursor(4, 2);
-               lcd.print(w.richtung, HEX);
-               
-               uint8_t weichenadresse[4] = {2, 2, 2, 1};
-               uint8_t weichenpos = ANZLOKS - 1;
-               taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
-               taskarray[weichenpos][1] = tritarray[weichenadresse[1]];
-               taskarray[weichenpos][2] = tritarray[weichenadresse[2]];
-               taskarray[weichenpos][3] = tritarray[weichenadresse[3]]; // OPEN
-               // rep
-               taskarray[weichenpos][12] = taskarray[weichenpos][0];
-               taskarray[weichenpos][13] = taskarray[weichenpos][1];
-               taskarray[weichenpos][14] = taskarray[weichenpos][2];
-               taskarray[weichenpos][15] = taskarray[weichenpos][3];
-
-               uint8_t weichennummer = w.weiche;
-               aktuelleweiche = w.weiche;
-               aktuelleweiche |= (w.richtung<<4);
-
-               if (!(weichenstatus & (1 << WEICHESTART)))
-               {
-                  weichenstatus |= (1 << WEICHESTART);
-                  weichenstatus |= (1 << WEICHERUN);
-                  weichencounter = 0;
-                  sinceweiche = 0;
-
-                  for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
-                  {
-                     if (weichennummer & (1 << i))
-                     {
-                        speedarray[i] = HI;
-                        taskarray[weichenpos][5 + i] = HI;
-                        // lcd.print("1");
-                        // speed_send |= (1<<i);
-                     }
-                     else
-                     {
-                        speedarray[i] = LO;
-                        taskarray[weichenpos][5 + i] = LO;
-                        // lcd.print("0");
-                        // speed_send &= ~(1<<i);
-                     }
-                  }
-                  taskarray[weichenpos][17] = taskarray[weichenpos][5];
-                  taskarray[weichenpos][18] = taskarray[weichenpos][6];
-                  taskarray[weichenpos][19] = taskarray[weichenpos][7];
-                  taskarray[weichenpos][20] = taskarray[weichenpos][8];
-
-                  // richtung
-                  if (w.richtung == 1)
-                  {
-                     taskarray[weichenpos][4] = HI;  // Ablenkung
-                     taskarray[weichenpos][16] = HI; // Ablenkung
-                  }
-                  else
-                  {
-                     taskarray[weichenpos][4] = LO;  // Gerade
-                     taskarray[weichenpos][16] = LO; // Gerade
-                  }
-               }
-            }
-            else
-            {
-               lcd.setCursor(6, 2);
-               lcd.print("*");
-            }
-         }
-         else
-         {
-            
-            lcd.setCursor(0, 2);
-            lcd.print("  ");
-            lcd.setCursor(4, 2);
-            lcd.print("  ");
-            lcd.setCursor(6, 2);
-            lcd.print("-");
-            
-         } 
-         // pop
-   */
+   
    // sinceblink = 0;
-   if (sinceblink > 500)
+   if ((sinceblink > 500) )//&& (looptask == PAUSETASK))
    {
       // OSZI_C_TOGG();
 
