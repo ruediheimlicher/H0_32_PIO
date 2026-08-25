@@ -925,6 +925,109 @@ void stromtimerfunction()
    emittermittelcounter++;
 }
 
+void poptask(void)
+{
+   //if (rb_count(&weichenringbuffer))
+         {
+            //OSZI_B_LO();
+            weichendata w;
+            // weichenXORcounterA
+            lcd.setCursor(0, 3);
+            lcd.print(weichenXORcounterA, HEX);
+            lcd.setCursor(4, 3);
+            lcd.print(weichenXORcounterB, HEX);
+            lcd.setCursor(8, 3);
+            lcd.print(weichenXORcounterC, HEX);
+            lcd.setCursor(12, 3);
+            lcd.print(weichenXORcounterD, HEX);
+            lcd.setCursor(12, 2);
+            lcd.print(oldweichentastencodeF, HEX);
+
+            lcd.setCursor(0,1);
+            lcd.print(weichentastendelay,HEX);
+            
+            int erfolg = rb_pop(&weichenringbuffer, &w);
+            if (erfolg == 0) // Weiche vorhanden
+            {
+               /*
+               lcd.setCursor(6, 2);
+               lcd.print("+");
+               lcd.setCursor(0, 2);
+               lcd.print(w.weiche, HEX);
+               lcd.setCursor(4, 2);
+               lcd.print(w.richtung, HEX);
+               */
+               uint8_t weichenadresse[4] = {2, 2, 2, 1};
+               uint8_t weichenpos = ANZLOKS - 1;
+               taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
+               taskarray[weichenpos][1] = tritarray[weichenadresse[1]];
+               taskarray[weichenpos][2] = tritarray[weichenadresse[2]];
+               taskarray[weichenpos][3] = tritarray[weichenadresse[3]]; // OPEN
+               // rep
+               taskarray[weichenpos][12] = taskarray[weichenpos][0];
+               taskarray[weichenpos][13] = taskarray[weichenpos][1];
+               taskarray[weichenpos][14] = taskarray[weichenpos][2];
+               taskarray[weichenpos][15] = taskarray[weichenpos][3];
+
+               uint8_t weichennummer = w.weiche;
+
+               if ((!(weichenstatus & (1 << WEICHESTART))))
+               {
+                  
+                  weichenstatus |= (1 << WEICHESTART);
+                  weichenstatus |= (1 << WEICHERUN);
+                  weichencounter = 0;
+                  sinceweiche = 0;
+
+                  for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
+                  {
+                     // Weichennummer einsetzen
+                     if (weichennummer & (1 << i))
+                     {
+
+                        taskarray[weichenpos][5 + i] = HI;
+                        // lcd.print("1");
+                     }
+                     else
+                     {
+
+                        taskarray[weichenpos][5 + i] = LO;
+                        // lcd.print("0");
+                     }
+                  }
+                  taskarray[weichenpos][17] = taskarray[weichenpos][5];
+                  taskarray[weichenpos][18] = taskarray[weichenpos][6];
+                  taskarray[weichenpos][19] = taskarray[weichenpos][7];
+                  taskarray[weichenpos][20] = taskarray[weichenpos][8];
+
+                  // richtung
+                  if (w.richtung == 1)
+                  {
+                     OSZI_C_LO();
+                     taskarray[weichenpos][4] = HI;  // Ablenkung
+                     taskarray[weichenpos][16] = HI; // Ablenkung
+                     OSZI_C_HI();
+                  }
+                  else
+                  {
+                     taskarray[weichenpos][4] = LO;  // Gerade
+                     taskarray[weichenpos][16] = LO; // Gerade
+                  }
+                  
+               }
+               //weichenXORcounterA = 0;
+            }
+            else
+            {
+               // lcd.setCursor(6, 2);
+               // lcd.print("*");
+            }
+            //OSZI_B_HI();
+         }
+         
+
+}
+
 // Add setup code
 void setup()
 {
@@ -1729,7 +1832,7 @@ void loop()
       // Weichen End
 
       OSZI_C_HI();
-      
+
 
       looptask = IMPULSTASK;
 
@@ -1881,112 +1984,9 @@ void loop()
 
          if (rb_count(&weichenringbuffer))
          {
-            //OSZI_B_LO();
-            weichendata w;
-            // weichenXORcounterA
-            lcd.setCursor(0, 3);
-            lcd.print(weichenXORcounterA, HEX);
-            lcd.setCursor(4, 3);
-            lcd.print(weichenXORcounterB, HEX);
-            lcd.setCursor(8, 3);
-            lcd.print(weichenXORcounterC, HEX);
-            lcd.setCursor(12, 3);
-            lcd.print(weichenXORcounterD, HEX);
-            lcd.setCursor(12, 2);
-            lcd.print(oldweichentastencodeF, HEX);
-
-            lcd.setCursor(0,1);
-            lcd.print(weichentastendelay,HEX);
-            
-            int erfolg = rb_pop(&weichenringbuffer, &w);
-            if (erfolg == 0) // Weiche vorhanden
-            {
-               /*
-               lcd.setCursor(6, 2);
-               lcd.print("+");
-               lcd.setCursor(0, 2);
-               lcd.print(w.weiche, HEX);
-               lcd.setCursor(4, 2);
-               lcd.print(w.richtung, HEX);
-               */
-               uint8_t weichenadresse[4] = {2, 2, 2, 1};
-               uint8_t weichenpos = ANZLOKS - 1;
-               taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
-               taskarray[weichenpos][1] = tritarray[weichenadresse[1]];
-               taskarray[weichenpos][2] = tritarray[weichenadresse[2]];
-               taskarray[weichenpos][3] = tritarray[weichenadresse[3]]; // OPEN
-               // rep
-               taskarray[weichenpos][12] = taskarray[weichenpos][0];
-               taskarray[weichenpos][13] = taskarray[weichenpos][1];
-               taskarray[weichenpos][14] = taskarray[weichenpos][2];
-               taskarray[weichenpos][15] = taskarray[weichenpos][3];
-
-               uint8_t weichennummer = w.weiche;
-
-               if ((!(weichenstatus & (1 << WEICHESTART))))
-               {
-                  
-                  weichenstatus |= (1 << WEICHESTART);
-                  weichenstatus |= (1 << WEICHERUN);
-                  weichencounter = 0;
-                  sinceweiche = 0;
-
-                  for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
-                  {
-                     // Weichennummer einsetzen
-                     if (weichennummer & (1 << i))
-                     {
-
-                        taskarray[weichenpos][5 + i] = HI;
-                        // lcd.print("1");
-                     }
-                     else
-                     {
-
-                        taskarray[weichenpos][5 + i] = LO;
-                        // lcd.print("0");
-                     }
-                  }
-                  taskarray[weichenpos][17] = taskarray[weichenpos][5];
-                  taskarray[weichenpos][18] = taskarray[weichenpos][6];
-                  taskarray[weichenpos][19] = taskarray[weichenpos][7];
-                  taskarray[weichenpos][20] = taskarray[weichenpos][8];
-
-                  // richtung
-                  if (w.richtung == 1)
-                  {
-                     OSZI_C_LO();
-                     taskarray[weichenpos][4] = HI;  // Ablenkung
-                     taskarray[weichenpos][16] = HI; // Ablenkung
-                     OSZI_C_HI();
-                  }
-                  else
-                  {
-                     taskarray[weichenpos][4] = LO;  // Gerade
-                     taskarray[weichenpos][16] = LO; // Gerade
-                  }
-                  
-               }
-               weichenXORcounterA = 0;
-            }
-            else
-            {
-               // lcd.setCursor(6, 2);
-               // lcd.print("*");
-            }
-            //OSZI_B_HI();
+            poptask();
          }
-         else
-         {
-            /*
-            lcd.setCursor(0, 2);
-            lcd.print("  ");
-            lcd.setCursor(4, 2);
-            lcd.print("  ");
-            lcd.setCursor(6, 2);
-            lcd.print("-");
-            */
-         }
+
 
          // pop
 
