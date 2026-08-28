@@ -215,7 +215,10 @@ uint8_t minanzeige = 0xFF;
 elapsedMillis sinms;
 elapsedMillis sinceblink;
 
+#define ANZWWEICHEN  16
 elapsedMillis sinceweiche;
+elapsedMillis sincelastweiche[ANZWWEICHEN];
+
 
 float sinpos = 0;
 #define pi 3.14
@@ -960,11 +963,10 @@ void poptask(void)
 
          if ((!(weichenstatus & (1 << WEICHESTART))))
          {
-            
-            weichenstatus |= (1 << WEICHESTART);
+             
             weichenstatus |= (1 << WEICHERUN);
             weichencounter = 0;
-            sinceweiche = 0;
+            //sinceweiche = 0;
 
             for (uint8_t i = 3; i != 255; i--) // i decrement 3..0
             {
@@ -1000,6 +1002,7 @@ void poptask(void)
                taskarray[weichenpos][4] = LO;  // Gerade
                taskarray[weichenpos][16] = LO; // Gerade
             }
+            
             
          }
          //weichenXORcounterA = 0;
@@ -1755,22 +1758,29 @@ void loop()
          if ((weichentastencodeF & (1 << SET_B_A_BIT)) == 0) // Taste 6 gedrueckt
          {
             OSZI_B_LO();
+            if(sincelastweiche[6] > 100)
+            {
             weichentastendelay |=  (1<<SET_B_A_BIT);
             mcp2.gpioDigitalWrite(OUT_B_A, HIGH); //
             weichenposition[GRUPPE_0] &= ~(1 << 6);
             weichendata wF = {.weiche = 6, .richtung = 0};
-            
+            sincelastweiche[6] = 0;
             rb_push(&weichenringbuffer, wF);
              OSZI_B_HI();
+            }
          }
 
          if ((weichentastencodeF & (1 << SET_B_B_BIT)) == 0) // Taste 5 gedrueckt
          {
+            if(sincelastweiche[6] > 100)
+            {
             weichentastendelay |=  (1<<SET_B_B_BIT);
             mcp2.gpioDigitalWrite(OUT_B_A, LOW); //
             weichenposition[GRUPPE_0] |= (1 << 6);
             weichendata wF = {.weiche = 6, .richtung = 1};
             rb_push(&weichenringbuffer, wF);
+            sincelastweiche[6] = 0;
+            }
          }
          // Weiche F Position 1
          if ((weichentastencodeF & (1 << SET_B_C_BIT)) == 0) // Taste 7 gedrueckt , weiche3
@@ -1815,6 +1825,10 @@ void loop()
 
       OSZI_C_HI();
 
+      if (rb_count(&weichenringbuffer))
+         {
+            poptask();
+         }
 
       looptask = IMPULSTASK;
 
@@ -1899,12 +1913,13 @@ void loop()
             taskarray[ANZLOKS - 1][3] = HI; // OPEN entfernen, Adresse auf 2,2,2,2 stellen
             taskarray[ANZLOKS - 1][15] = HI;
 
-            weichenstatus &= ~(1 << WEICHERUN);
+            
          }
       }
       else if (weichencounter >= MAXWEICHENCOUNTER) // Pause
       {
          // weichencounter = 64;
+         weichenstatus &= ~(1 << WEICHERUN);
          weichenstatus &= ~(1 << WEICHESTART);
       }
    }
@@ -1966,7 +1981,7 @@ void loop()
 
          if (rb_count(&weichenringbuffer))
          {
-            poptask();
+            //poptask();
          }
          lcd.setCursor(0, 3);
          lcd.print(weichenXORcounterA, HEX);
