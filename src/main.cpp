@@ -937,14 +937,14 @@ void poptask(void)
       int erfolg = rb_pop(&weichenringbuffer, &w);
       if (erfolg == 0) // Weiche vorhanden
       {
-         /*
+         
          lcd.setCursor(6, 2);
          lcd.print("+");
          lcd.setCursor(0, 2);
          lcd.print(w.weiche, HEX);
          lcd.setCursor(4, 2);
          lcd.print(w.richtung, HEX);
-         */
+         
          uint8_t weichenadresse[4] = {2, 2, 2, 1};
          uint8_t weichenpos = ANZLOKS - 1;
          taskarray[weichenpos][0] = tritarray[weichenadresse[0]];
@@ -1607,50 +1607,50 @@ void loop()
          // Weiche A Position 0
          if ((weichentastencodeC & (1 << SET_A_A_BIT)) == 0) // 6   Taste 6 gedrueckt , weiche0
          {
-            if (sincelastweiche[0] > 100)
+            if (sincelastweiche[2] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_A_A, HIGH);   // GPA7
-               weichenposition[GRUPPE_0] &= ~(1 << 0); // bit fuer weiche loeschen
-               weichendata wC = {.weiche = 0, .richtung = 0};
+               weichenposition[GRUPPE_0] &= ~(1 << 2); // bit fuer weiche loeschen
+               weichendata wC = {.weiche = 2, .richtung = 0};
                rb_push(&weichenringbuffer, wC);
-               sincelastweiche[0] = 0;
+               sincelastweiche[2] = 0;
             }
          }
 
          if ((weichentastencodeC & (1 << SET_A_B_BIT)) == 0) //  3    Taste 5 gedrueckt weiche0
          {
-            if (sincelastweiche[0] > 100)
+            if (sincelastweiche[2] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_A_A, LOW);   //
-               weichenposition[GRUPPE_0] |= (1 << 0); // bit fur weiche setzen
-               weichendata wC = {.weiche = 0, .richtung = 1};
+               weichenposition[GRUPPE_0] |= (1 << 2); // bit fur weiche setzen
+               weichendata wC = {.weiche = 2, .richtung = 1};
                rb_push(&weichenringbuffer, wC);
-               sincelastweiche[0] = 0;
+               sincelastweiche[2] = 0;
             }
          }
 
          // Weiche B Position 1
          if ((weichentastencodeC & (1 << SET_A_C_BIT)) == 0) //  7    Taste 3 gedrueckt , weiche1
          {
-            if (sincelastweiche[1] > 100)
+            if (sincelastweiche[3] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_A_B, HIGH); // GPA7
-               weichenposition[GRUPPE_0] &= ~(1 << 1);
-               weichendata wC = {.weiche = 1, .richtung = 0};
+               weichenposition[GRUPPE_0] &= ~(1 << 3);
+               weichendata wC = {.weiche = 3, .richtung = 0};
                rb_push(&weichenringbuffer, wC);
-               sincelastweiche[1] = 0;
+               sincelastweiche[3] = 0;
             }
          }
 
          if ((weichentastencodeC & (1 << SET_A_D_BIT)) == 0) // 2    Taste 2 gedrueckt weiche1
          {
-            if (sincelastweiche[1] > 100)
+            if (sincelastweiche[3] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_A_B, LOW); //
-               weichenposition[GRUPPE_0] |= (1 << 1);
-               weichendata wC = {.weiche = 1, .richtung = 1};
+               weichenposition[GRUPPE_0] |= (1 << 3);
+               weichendata wC = {.weiche = 3, .richtung = 1};
                rb_push(&weichenringbuffer, wC);
-               sincelastweiche[1] = 0;
+               sincelastweiche[3] = 0;
             }
          }
 
@@ -1667,46 +1667,46 @@ void loop()
          // Weiche C Position 2
          if ((weichentastencodeD & (1 << SET_B_A_BIT)) == 0) // Taste 6 gedrueckt
          {
-            if (sincelastweiche[2] > 100)
+            if (sincelastweiche[0] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_B_A, HIGH); // GPB7
-               weichendata wD = {.weiche = 2, .richtung = 0};
+               weichendata wD = {.weiche = 0, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
-               sincelastweiche[2] = 0;
+               sincelastweiche[0] = 0;
             }
          }
 
          if ((weichentastencodeD & (1 << SET_B_B_BIT)) == 0) // Taste 5 gedrueckt
          {
-            if (sincelastweiche[2] > 100)
+            if (sincelastweiche[0] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_B_A, LOW); //
-               weichendata wD = {.weiche = 2, .richtung = 1};
+               weichendata wD = {.weiche = 0, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
-               sincelastweiche[2] = 0;
+               sincelastweiche[0] = 0;
             }
          }
 
          // Weiche D Position 1
          if ((weichentastencodeD & (1 << SET_B_C_BIT)) == 0) // Taste 3 gedrueckt , weiche3
          {
-            if (sincelastweiche[3] > 100)
+            if (sincelastweiche[1] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
-               weichendata wD = {.weiche = 3, .richtung = 0};
+               weichendata wD = {.weiche = 1, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
-               sincelastweiche[3] = 0;
+               sincelastweiche[1] = 0;
             }
          }
 
          if ((weichentastencodeD & (1 << SET_B_D_BIT)) == 0) // Taste 2 gedrueckt weiche3
          {
-            if (sincelastweiche[3] > 100)
+            if (sincelastweiche[1] > 100)
             {
                mcp1.gpioDigitalWrite(OUT_B_B, LOW); //
-               weichendata wD = {.weiche = 3, .richtung = 1};
+               weichendata wD = {.weiche = 1, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
-               sincelastweiche[3] = 0;
+               sincelastweiche[1] = 0;
             }
          }
 
