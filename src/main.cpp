@@ -938,12 +938,12 @@ void poptask(void)
       if (erfolg == 0) // Weiche vorhanden
       {
          
-         lcd.setCursor(6, 2);
-         lcd.print("+");
+         
          lcd.setCursor(0, 2);
          lcd.print(w.weiche, HEX);
          lcd.setCursor(4, 2);
          lcd.print(w.richtung, HEX);
+         
          
          uint8_t weichenadresse[4] = {2, 2, 2, 1};
          uint8_t weichenpos = ANZLOKS - 1;
@@ -1210,8 +1210,8 @@ void setup()
    mcp1.gpioPinMode(CHECK, OUTPUT);
    mcp1.gpioPinMode(BLINK, OUTPUT);
    // 11001100
-   mcp1.gpioPort(0xFFFF); // alle HI
-
+   //mcp1.gpioPort(0xFFFF); // alle HI
+   mcp1.gpioPort(0x00); // alle LO, Gerade
    // ***********************************
    // mcp2
    // ***********************************
@@ -1225,7 +1225,8 @@ void setup()
    mcp2.gpioPinMode(10, OUTPUT);
    mcp2.gpioPinMode(11, OUTPUT);
 
-   mcp2.gpioPort(0xFFFF); // alle HI
+   //mcp2.gpioPort(0xFFFF); // alle HI
+   mcp2.gpioPort(0x00); // alle LO, Gerade
 
    EEPROM.begin();
    lcd.setCursor(18, 0);
@@ -1310,6 +1311,14 @@ void setup()
    taskarray[0][1] = tritarray[buffer[9]];
    taskarray[0][2] = tritarray[buffer[10]];
    taskarray[0][3] = tritarray[buffer[11]];
+
+   for (int i=0;i<8;i++)
+   {
+      weichendata wF = {.weiche = i, .richtung = 1};
+      rb_push(&weichenringbuffer, wF);
+      
+   }
+  
 
    /*
       delay(50);
@@ -1605,7 +1614,7 @@ void loop()
       {
          weichenXORcounterA++;
          // Weiche A Position 0
-         if ((weichentastencodeC & (1 << SET_A_A_BIT)) == 0) // 6   Taste 6 gedrueckt , weiche0
+         if ((weichentastencodeC & (1 << SET_A_A_BIT)) == 0) // 6   Taste 6 gedrueckt , weiche2
          {
             if (sincelastweiche[2] > 100)
             {
@@ -1617,7 +1626,7 @@ void loop()
             }
          }
 
-         if ((weichentastencodeC & (1 << SET_A_B_BIT)) == 0) //  3    Taste 5 gedrueckt weiche0
+         if ((weichentastencodeC & (1 << SET_A_B_BIT)) == 0) //  3    Taste 5 gedrueckt weiche2
          {
             if (sincelastweiche[2] > 100)
             {
@@ -1669,6 +1678,8 @@ void loop()
          {
             if (sincelastweiche[0] > 100)
             {
+               weichenposition[GRUPPE_0] &= ~(1 << 0); // bit fuer weiche loeschen
+
                mcp1.gpioDigitalWrite(OUT_B_A, HIGH); // GPB7
                weichendata wD = {.weiche = 0, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
@@ -1680,6 +1691,7 @@ void loop()
          {
             if (sincelastweiche[0] > 100)
             {
+               weichenposition[GRUPPE_0] |= (1 << 0); // bit fur weiche setzen
                mcp1.gpioDigitalWrite(OUT_B_A, LOW); //
                weichendata wD = {.weiche = 0, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
@@ -1692,6 +1704,7 @@ void loop()
          {
             if (sincelastweiche[1] > 100)
             {
+               weichenposition[GRUPPE_0] &= ~(1 << 1); // bit fuer weiche loeschen
                mcp1.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
                weichendata wD = {.weiche = 1, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
@@ -1703,6 +1716,7 @@ void loop()
          {
             if (sincelastweiche[1] > 100)
             {
+               weichenposition[GRUPPE_0] |= (1 << 1); // bit fur weiche setzen
                mcp1.gpioDigitalWrite(OUT_B_B, LOW); //
                weichendata wD = {.weiche = 1, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
@@ -3412,6 +3426,7 @@ void loop()
          {
             taskarray[localnum][4] = HI;
             taskarray[localnum][16] = HI; // rep
+            
             //            //  lcd.setCursor(12,1);
             //            //  lcd.print("ON ");
          }
@@ -3424,34 +3439,7 @@ void loop()
          }
       } // for localnum
 
-      // exp
-      /*
-      {
-         taskarray[2][5] = taskarray[0][5]; // auch richtung
-         taskarray[2][6] = taskarray[0][6];
-         taskarray[2][7] = taskarray[0][7];
-         taskarray[2][8] = taskarray[0][8];
-
-         taskarray[2][17] = taskarray[0][5]; // auch richtung
-         taskarray[2][18] = taskarray[0][6];
-         taskarray[2][19] = taskarray[0][7];
-         taskarray[2][20] = taskarray[0][8];
-
-      }
-
-      {
-         taskarray[3][5] = taskarray[1][5]; // auch richtung
-         taskarray[3][6] = taskarray[1][6];
-         taskarray[3][7] = taskarray[1][7];
-         taskarray[3][8] = taskarray[1][8];
-
-         taskarray[3][17] = taskarray[1][5]; // auch richtung
-         taskarray[3][18] = taskarray[1][6];
-         taskarray[3][19] = taskarray[1][7];
-         taskarray[3][20] = taskarray[1][8];
-
-      }
-      */
+      
 
    } // local
 
