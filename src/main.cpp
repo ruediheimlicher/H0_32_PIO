@@ -86,6 +86,8 @@ elapsedMillis sinceLastBlink = 0;
 
 uint8_t weichentastencounter = 0;
 
+uint8_t taste = 'X';
+
 uint8_t firstruncounter = 0;
 
 Signal data;
@@ -1218,8 +1220,7 @@ void setup()
    lcd.setCursor(18, 0);
    lcd.print("f");
    mcp2.begin(0);
-   lcd.setCursor(18, 0);
-   lcd.print("g");
+ 
    // mcp2.gpioPinMode(PIN_MODE);// A7 output, A6,A5 input
    mcp2.gpioPinMode(0x33CC);
    mcp2.gpioPinMode(10, OUTPUT);
@@ -1229,9 +1230,8 @@ void setup()
    mcp2.gpioPort(0x00); // alle LO, Gerade
 
    EEPROM.begin();
-   lcd.setCursor(18, 0);
-   lcd.print("h");
-   // delay(100);
+
+   
    usbtask = 0;
    adressearray[0] = OPEN;
    adressearray[1] = HI;
@@ -1271,15 +1271,7 @@ void setup()
    // pinMode(CURR_PIN, INPUT);
 
    // lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
-   lcd.setCursor(18, 0);
-   lcd.print("i");
-   //_delay_ms(100);
-   lcd.setCursor(18, 0);
-   lcd.print("j");
-
-   ADC_init();
-   lcd.setCursor(18, 0);
-   lcd.print("k");
+   
    delay(100);
    // Serial.print("setup: ");
    //  lcd.init();
@@ -1291,7 +1283,7 @@ void setup()
    uint8_t eepromtimerintervall = EEPROM.read(0xA0);
    if (eepromtimerintervall < 0xFF) // schon ein Wert gespeichert
    {
-      timerintervall = eepromtimerintervall;
+      //timerintervall = eepromtimerintervall;
    }
    //  lcd.setCursor(0,0);
    //  lcd.print(timerintervall);
@@ -1318,7 +1310,15 @@ void setup()
       rb_push(&weichenringbuffer, wF);
       
    }
+   lcd.clear();
   
+  uint8_t eepromstartwert = EEPROM.read(EEPROM_WEICHESTART);
+   
+   lcd.setCursor(10, 0);
+   lcd.print("EE ");
+   lcd.print(eepromstartwert);
+   //EEPROM.update(EEPROM_WEICHESTART,eepromstartwert+1);
+   // delay(100);
 
    /*
       delay(50);
@@ -1448,7 +1448,7 @@ void setup()
               // Serial.println(eepromadressbyte);
    //  lcd.print(eepromadressbyte);
     */
-   lcd.clear();
+   
    lcd.setCursor(19, 1);
    lcd.print("X");
 
@@ -1614,7 +1614,7 @@ void loop()
       {
          weichenXORcounterA++;
          // Weiche A Position 0
-         if ((weichentastencodeC & (1 << SET_A_A_BIT)) == 0) // 6   Taste 6 gedrueckt , weiche2
+         if ((weichentastencodeC & (1 << SET_A_A_BIT)) == 0) // 6   Taste A  gedrueckt , weiche2
          {
             if (sincelastweiche[2] > 100)
             {
@@ -1622,11 +1622,13 @@ void loop()
                weichenposition[GRUPPE_0] &= ~(1 << 2); // bit fuer weiche loeschen
                weichendata wC = {.weiche = 2, .richtung = 0};
                rb_push(&weichenringbuffer, wC);
+               uint8_t eepromdata = (wC.weiche << 4) | wC.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wC.weiche,(eepromdata));
                sincelastweiche[2] = 0;
             }
          }
 
-         if ((weichentastencodeC & (1 << SET_A_B_BIT)) == 0) //  3    Taste 5 gedrueckt weiche2
+         if ((weichentastencodeC & (1 << SET_A_B_BIT)) == 0) //  3    Taste B gedrueckt weiche2
          {
             if (sincelastweiche[2] > 100)
             {
@@ -1634,6 +1636,8 @@ void loop()
                weichenposition[GRUPPE_0] |= (1 << 2); // bit fur weiche setzen
                weichendata wC = {.weiche = 2, .richtung = 1};
                rb_push(&weichenringbuffer, wC);
+               uint8_t eepromdata = (wC.weiche << 4) | wC.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wC.weiche,(eepromdata));
                sincelastweiche[2] = 0;
             }
          }
@@ -1646,6 +1650,8 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_A_B, HIGH); // GPA7
                weichenposition[GRUPPE_0] &= ~(1 << 3);
                weichendata wC = {.weiche = 3, .richtung = 0};
+               uint8_t eepromdata = (wC.weiche << 4) | wC.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wC.weiche,(eepromdata));
                rb_push(&weichenringbuffer, wC);
                sincelastweiche[3] = 0;
             }
@@ -1658,6 +1664,8 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_A_B, LOW); //
                weichenposition[GRUPPE_0] |= (1 << 3);
                weichendata wC = {.weiche = 3, .richtung = 1};
+               uint8_t eepromdata = (wC.weiche << 4) | wC.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wC.weiche,(eepromdata));
                rb_push(&weichenringbuffer, wC);
                sincelastweiche[3] = 0;
             }
@@ -1683,11 +1691,14 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_B_A, HIGH); // GPB7
                weichendata wD = {.weiche = 0, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
+               uint8_t eepromdata = (wD.weiche << 4) | wD.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wD.weiche,(eepromdata));
                sincelastweiche[0] = 0;
+               taste = 'G';
             }
          }
 
-         if ((weichentastencodeD & (1 << SET_B_B_BIT)) == 0) // Taste 5 gedrueckt
+         if ((weichentastencodeD & (1 << SET_B_B_BIT)) == 0) // Taste  gedrueckt
          {
             if (sincelastweiche[0] > 100)
             {
@@ -1695,7 +1706,10 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_B_A, LOW); //
                weichendata wD = {.weiche = 0, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
+               uint8_t eepromdata = (wD.weiche << 4) | wD.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wD.weiche,(eepromdata));
                sincelastweiche[0] = 0;
+               taste = 'A';
             }
          }
 
@@ -1708,6 +1722,8 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_B_B, HIGH); // GPA7
                weichendata wD = {.weiche = 1, .richtung = 0};
                rb_push(&weichenringbuffer, wD);
+               uint8_t eepromdata = (wD.weiche << 4) | wD.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wD.weiche,(eepromdata));
                sincelastweiche[1] = 0;
             }
          }
@@ -1720,6 +1736,8 @@ void loop()
                mcp1.gpioDigitalWrite(OUT_B_B, LOW); //
                weichendata wD = {.weiche = 1, .richtung = 1};
                rb_push(&weichenringbuffer, wD);
+               uint8_t eepromdata = (wD.weiche << 4) | wD.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wD.weiche,(eepromdata));
                sincelastweiche[1] = 0;
             }
          }
@@ -1749,6 +1767,8 @@ void loop()
 
                weichendata wE = {.weiche = 6, .richtung = 0};
                rb_push(&weichenringbuffer, wE);
+               uint8_t eepromdata = (wE.weiche << 4) | wE.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wE.weiche,(eepromdata));
                sincelastweiche[6] = 0;
             }
          }
@@ -1762,6 +1782,8 @@ void loop()
 
                weichendata wE = {.weiche = 6, .richtung = 1};
                rb_push(&weichenringbuffer, wE);
+               uint8_t eepromdata = (wE.weiche << 4) | wE.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wE.weiche,(eepromdata));
                sincelastweiche[6] = 0;
             }
          }
@@ -1776,6 +1798,8 @@ void loop()
 
                weichendata wE = {.weiche = 7, .richtung = 0};
                rb_push(&weichenringbuffer, wE);
+               uint8_t eepromdata = (wE.weiche << 4) | wE.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wE.weiche,(eepromdata));
                sincelastweiche[7] = 0;
             }
          }
@@ -1789,6 +1813,8 @@ void loop()
 
                weichendata wE = {.weiche = 7, .richtung = 1};
                rb_push(&weichenringbuffer, wE);
+               uint8_t eepromdata = (wE.weiche << 4) | wE.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wE.weiche,(eepromdata));
                sincelastweiche[7] = 0;
             }
          }
@@ -1814,6 +1840,9 @@ void loop()
                weichendata wF = {.weiche = 4, .richtung = 0};
                sincelastweiche[4] = 0;
                rb_push(&weichenringbuffer, wF);
+               uint8_t eepromdata = (wF.weiche << 4) | wF.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wF.weiche,(eepromdata));
+
                OSZI_B_HI();
             }
          }
@@ -1827,6 +1856,8 @@ void loop()
                weichenposition[GRUPPE_0] |= (1 << 4);
                weichendata wF = {.weiche = 4, .richtung = 1};
                rb_push(&weichenringbuffer, wF);
+               uint8_t eepromdata = (wF.weiche << 4) | wF.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wF.weiche,(eepromdata));
                sincelastweiche[4] = 0;
             }
          }
@@ -1840,6 +1871,8 @@ void loop()
                weichenposition[GRUPPE_0] &= ~(1 << 5);
                weichendata wF = {.weiche = 5, .richtung = 0};
                rb_push(&weichenringbuffer, wF);
+               uint8_t eepromdata = (wF.weiche << 4) | wF.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wF.weiche,(eepromdata));
                sincelastweiche[5] = 0;
             }
          }
@@ -1854,6 +1887,8 @@ void loop()
                weichenposition[GRUPPE_0] |= (1 << 5);
                weichendata wF = {.weiche = 5, .richtung = 1};
                rb_push(&weichenringbuffer, wF);
+               uint8_t eepromdata = (wF.weiche << 4) | wF.richtung;
+               EEPROM.update(EEPROM_WEICHESTART + wF.weiche,(eepromdata));
                // OSZI_B_HI();
                sincelastweiche[5] = 0;
             }
@@ -1985,7 +2020,17 @@ void loop()
    {
       // OSZI_C_TOGG();
 
-      //  mcp2.gpioDigitalWrite(15,0); //
+     lcd.setCursor(0,0);
+     for(uint8_t i=0;i<6;i++)
+     {
+         lcd.print(EEPROM.read(EEPROM_WEICHESTART+i),HEX);
+         lcd.print(" ");
+     }
+     lcd.setCursor(4,1);
+     lcd.print(char(taste));
+     //lcd.print(EEPROM.read(EEPROM_WEICHESTART),HEX);
+
+
       if (sourcestatus & 0x01) // local
       {
 
@@ -2262,6 +2307,7 @@ void loop()
       printHex8(usbtask);
       // Serial.printf("USB sourcestatus: %d loknummer: %d\n",sourcestatus,loknummer);
        */
+      /*
       if (timerintervall != buffer[18])
       {
 
@@ -2275,7 +2321,7 @@ void loop()
             loopstatus &= ~(1 << FIRSTRUN);
          }
       }
-
+      */
       // // Serial.printf("USB sourcestatus 2: %d\n ",sourcestatus);
       // #pragma mark TASK
       if (sourcestatus & 0x02) // USB

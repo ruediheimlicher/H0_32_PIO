@@ -79,15 +79,16 @@
 #define EEPROM_WRITE 0
 #define EEPROM_READ 1
 
-#define EEPROMINDEX_U 0x10
-#define EEPROMINDEX_O 0x20
-#define EEPROMINDEX_M 0x30
+/*
+EEPROM
+MAX: 0x400 (1024)
 
-#define EEPROMLEVELSETTINGS 0x40
-#define EEPROMEXPOSETTINGS 0x48
 
-#define EEPROMSLAVEINDEX_M 0x56
+Weichen:
 
+*/
+
+#define EEPROM_WEICHESTART   0xAA
 // defines for PINS
 // links
 #define PITCH_PIN A3 // PSB2: A6
