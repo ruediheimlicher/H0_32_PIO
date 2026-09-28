@@ -1670,7 +1670,6 @@ void loop()
                sincelastweiche[3] = 0;
             }
          }
-
          oldweichentastencodeC = weichentastencodeC;
 
       } // if(weichentastencodeD ^
